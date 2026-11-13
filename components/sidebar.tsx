@@ -436,7 +436,7 @@ function SessionsSidebar() {
 				</div>
 
 				{ }
-				<div className="flex flex-col gap-2">
+				<div className="mx-3 flex flex-col gap-2">
 					<button
 						type="button"
 						data-testid="new-session"
