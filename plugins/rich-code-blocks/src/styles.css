@@ -1,0 +1,28 @@
+@import url("./assets/fonts/fonts.css");
+
+.rich-code-blocks {
+  --rich-code-blocks-black: var(--foreground, currentColor);
+  --rich-code-blocks-carbon: var(--foreground, currentColor);
+  --rich-code-blocks-hydrogen: var(--foreground, currentColor);
+  min-width: 0;
+  max-width: 100%;
+}
+.rich-code-blocks > pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.rich-code-blocks--rendered {
+  background: transparent;
+  color: var(--foreground, inherit);
+  padding: 12px;
+  overflow: auto;
+}
+.rich-code-blocks--rendered > svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.rich-code-blocks--rendered[data-language="tikz"] > svg {
+  max-width: none;
+}

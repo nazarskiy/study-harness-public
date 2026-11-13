@@ -1,0 +1,16 @@
+export function svgImageSource(svg: string): string {
+	let foundRoot = false;
+	return svg.replace(
+		/<!--[\s\S]*?(?:-->|$)|<!\[CDATA\[[\s\S]*?(?:\]\]>|$)|<\?[\s\S]*?(?:\?>|$)|<\/?[a-zA-Z](?:[^<>"']|"[^"]*"|'[^']*')*>|&nbsp;/g,
+		(token) => {
+			if (token.startsWith("<!--") || token.startsWith("<![CDATA[") || token.startsWith("<?")) return token;
+			if (!foundRoot && /^<svg(?=[\s/>])/i.test(token)) {
+				foundRoot = true;
+				const attrs = token.matchAll(/\s([^\s=/>]+)(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?/g);
+				const hasNamespace = Array.from(attrs).some((attr) => attr[1] === "xmlns");
+				if (!hasNamespace) token = token.replace(/^<svg/i, '$& xmlns="http://www.w3.org/2000/svg"');
+			}
+			return token.replace(/&nbsp;/g, "&#160;");
+		},
+	);
+}
