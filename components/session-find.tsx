@@ -1,14 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
-import { ChevronDownIcon, ChevronUpIcon, SearchIcon, XIcon } from "@/components/ui/icons";
-import { kbdEventForAction, stepSessionMatch } from "@/src/core";
 import {
-	sameSessionRange, sessionFindRanges, sessionRangeIdentity, type SessionRangeIdentity,
+sameSessionRange,sessionFindRanges,sessionRangeIdentity,type SessionRangeIdentity,
 } from "@/components/session-find-dom";
-import { scrollSessionTarget, type SessionScrollContext } from "@/components/session-navigation";
+import { scrollSessionTarget,type SessionScrollContext } from "@/components/session-navigation";
+import { ChevronDownIcon,ChevronUpIcon,SearchIcon,XIcon } from "@/components/ui/icons";
+import { kbdEventForAction,stepSessionMatch } from "@/src/core";
+import { useCallback,useEffect,useRef,useState,type RefObject } from "react";
+import { hasLegacyInteractionForeground,isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { hasLegacyInteractionForeground, isInteractionScopeEligible } from "./plugin-input-focus";
 
 export const SESSION_FIND_HIGHLIGHT = "ow-session-find";
 export const SESSION_FIND_ACTIVE_HIGHLIGHT = "ow-session-find-active";

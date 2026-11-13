@@ -2,13 +2,13 @@
 
 import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ArrowRightIcon, SquareIcon, ArrowUpIcon } from "@/components/ui/icons";
-import { cn } from "@/lib/utils";
-import { PathInput } from "@/components/path-input";
 import { AttachFilesButton } from "@/components/attach-files-button";
+import { PathInput } from "@/components/path-input";
+import { ArrowRightIcon,ArrowUpIcon,SquareIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
+import { useCallback,useLayoutEffect,useRef,useState,type ReactNode } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
 
 export function enterAction(state: {
 	busy: boolean;
@@ -29,15 +29,12 @@ export function ChatSessionComposer({
 	onSend,
 	onStop,
 	sendAllowed,
-	dictationActive,
 	autoFocus,
 	inputRef,
-	onEscape,
 	placeholder,
 	nextProblem,
 	onNext,
 	pendingInput = false,
-	dictationSlot,
 }: {
 	busy: boolean;
 	value: string;
@@ -46,19 +43,16 @@ export function ChatSessionComposer({
 	onSend: () => void;
 	onStop: () => void;
 	sendAllowed: boolean;
-	dictationActive: boolean;
 	autoFocus?: boolean;
 	inputRef?: React.RefObject<HTMLDivElement | null>;
-	onEscape?: () => void;
 	placeholder?: string;
 	nextProblem?: boolean;
 	onNext?: () => void;
 	pendingInput?: boolean;
-	dictationSlot?: ReactNode;
 }) {
 	const [draft, setDraft] = useState(value);
 	useLayoutEffect(() => { setDraft(value); }, [revision, value]);
-	const canSend = sendAllowed && (draft.trim().length > 0 || dictationActive || pendingInput);
+	const canSend = sendAllowed && (draft.trim().length > 0 || pendingInput);
 	const applyDraft = useCallback((next: string) => {
 		setDraft(next);
 		onChange(next);
@@ -74,9 +68,7 @@ export function ChatSessionComposer({
 			canSend={canSend}
 			autoFocus={autoFocus}
 			inputRef={inputRef}
-			onEscape={onEscape}
 			placeholder={placeholder}
-			dictationSlot={dictationSlot}
 			nextProblem={nextProblem}
 			onNext={onNext}
 		/>
@@ -92,13 +84,11 @@ export function Composer({
 	canSend,
 	autoFocus,
 	inputRef,
-	onEscape,
 	placeholder = "Ask, answer, or steer the lesson…",
 	nextProblem = false,
 	onNext,
 	defaultDropTarget = true,
 	fileInsertion = true,
-	dictationSlot,
 }: {
 	busy: boolean;
 	value: string;
@@ -108,13 +98,11 @@ export function Composer({
 	canSend: boolean;
 	autoFocus?: boolean;
 	inputRef?: React.RefObject<HTMLDivElement | null>;
-	onEscape?: () => void;
 	placeholder?: string;
 	nextProblem?: boolean;
 	onNext?: () => void;
 	defaultDropTarget?: boolean;
 	fileInsertion?: boolean;
-	dictationSlot?: ReactNode;
 }) {
 	const attachments = useAttachmentUploads();
 	const controller = useOptionalInteractionLayers();
@@ -144,13 +132,6 @@ export function Composer({
 				fileInsertion={fileInsertion}
 				onKeyDown={(e) => {
 					if (!isInteractionScopeEligible(e.currentTarget, controller)) return;
-					if (e.key === "Escape" && onEscape) {
-						controller?.claimEscape(e);
-						e.preventDefault();
-						e.stopPropagation();
-						onEscape();
-						return;
-					}
 					if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
 						e.preventDefault();
 						act();
@@ -161,7 +142,6 @@ export function Composer({
 				className="field-sizing-content ow-input max-h-48 min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 font-semibold outline-none placeholder:font-medium placeholder:text-muted-foreground"
 			/>
 			<AttachFilesButton editorRef={editorRef} />
-			{dictationSlot}
 			{
 }
 				{nextProblem && !busy && !canSend ? (

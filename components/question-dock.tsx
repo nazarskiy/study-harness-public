@@ -2,52 +2,49 @@
 
 import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { ViewReaderRef, NativeQuestionViewState } from "./session-view-readers";
-import { ArrowDownIcon, CheckIcon, ChevronRightIcon, PlayIcon } from "@/components/ui/icons";
-import { Owl } from "@/components/owl/owl";
-import { Button } from "@/components/ui/button";
-import { finishDictation, isDictationActive, joinDictation, useDictationTarget } from "@/components/dictation";
-import { useEnterSubmits } from "@/components/enter-submits";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { PathInput } from "@/components/path-input";
-import { MalformedQuestion } from "@/components/malformed-question";
 import { ToolContentResponse } from "@/components/ai-elements/message";
+import { useEnterSubmits } from "@/components/enter-submits";
+import { MalformedQuestion } from "@/components/malformed-question";
+import { Owl } from "@/components/owl/owl";
+import { PathInput } from "@/components/path-input";
 import { QuestionPreview } from "@/components/question-preview";
+import { Button } from "@/components/ui/button";
+import { ArrowDownIcon,CheckIcon,ChevronRightIcon,PlayIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import {
-	buildAnswer,
-	toClientQuestion,
-	normalizeQuizType,
-	emptyDockSelection,
-	normalizeOptions,
-	resolveCorrect,
-	seededRandom,
-	shuffleOptions,
-	toolQuestionKind,
-	parseAskInput,
-	parseQuizInput,
-	parseExplainInput,
-	toggleOption,
-	toggleOther,
-	type AnswerRequest,
-	type AskToolInput,
-	type DockSelection,
-	type ExplainToolInput,
-	type QuestionAnswerData,
-	type QuestionFormDraft,
-	type QuestionData,
-	type QuestionMode,
-	type QuizToolInput,
-	type SelectMode,
-	type Phase3,
+buildAnswer,
+emptyDockSelection,
+normalizeOptions,
+normalizeQuizType,
+parseAskInput,
+parseExplainInput,
+parseQuizInput,
+resolveCorrect,
+seededRandom,
+shuffleOptions,
+toggleOption,
+toggleOther,
+toolQuestionKind,
+type AnswerRequest,
+type AskToolInput,
+type DockSelection,
+type ExplainToolInput,
+type Phase3,
+type QuestionAnswerData,
+type QuestionData,
+type QuestionFormDraft,
+type QuestionMode,
+type QuizToolInput,
+type SelectMode
 } from "@/src/core";
-import type { PrepareBuiltinSubmission } from "./plugin-submission-adapters";
+import { useCallback,useEffect,useMemo,useRef,useState } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useOptionalInteractionLayers } from "./interaction-layers";
+import type { PrepareBuiltinSubmission } from "./submission-adapters";
 
 
 export interface QuestionDockProps {
-	viewReader?: ViewReaderRef<NativeQuestionViewState>;
+
 	toolName: "quiz" | "probe" | "ask_user_question" | "explain" | "recall";
 	toolCallId: string;
 	input: QuizToolInput | AskToolInput | ExplainToolInput;
@@ -60,16 +57,13 @@ export interface QuestionDockProps {
 	preparing?: boolean;
 	initialDraft?: QuestionFormDraft;
 	onSaveDraft?: (draft: QuestionFormDraft) => void;
-	onEscape?: () => void;
 	workingRef?: { current: string };
 	active?: boolean;
 	phase?: Phase3;
-	dictationClaim?: boolean;
 	compactionRunning?: boolean;
 }
 
 export function QuestionDock({
-	viewReader,
 	toolName,
 	toolCallId,
 	input,
@@ -82,9 +76,7 @@ export function QuestionDock({
 	preparing,
 	initialDraft,
 	onSaveDraft,
-	onEscape,
 	phase = "probe",
-	dictationClaim = true,
 	compactionRunning = false,
 	workingRef,
 }: QuestionDockProps) {
@@ -115,7 +107,7 @@ export function QuestionDock({
 			)}
 			<div className={expanded ? "dock-variant" : "invisible h-0 overflow-hidden"}>
 				<QuestionDockForm
-					viewReader={viewReader}
+
 					toolName={toolName}
 					toolCallId={toolCallId}
 					input={parsed}
@@ -127,9 +119,7 @@ export function QuestionDock({
 					preparing={preparing}
 					initialDraft={initialDraft}
 					onSaveDraft={onSaveDraft}
-					onEscape={onEscape}
 					workingRef={workingRef}
-					dictationClaim={dictationClaim}
 					compactionRunning={compactionRunning}
 				/>
 			</div>
@@ -198,7 +188,6 @@ export function QuestionDockBar({
 }
 
 function QuestionDockForm({
-	viewReader,
 	toolName,
 	toolCallId,
 	input,
@@ -210,8 +199,6 @@ function QuestionDockForm({
 	preparing,
 	initialDraft,
 	onSaveDraft,
-	onEscape,
-	dictationClaim = true,
 	compactionRunning = false,
 	workingRef,
 }: Omit<QuestionDockProps, "expanded" | "onExpand" | "reveal">) {
@@ -272,20 +259,6 @@ function QuestionDockForm({
 	const answerTextRef = useRef(initialDraft?.text ?? "");
 	const selectMode: SelectMode = qd.mode === "multi-select" ? "multi-select" : "single-select";
 
-	useDictationTarget(
-		useCallback(
-			(t: string) => {
-				if (qd.mode === "text") {
-					const v = joinDictation(answerTextRef.current, t);
-					answerTextRef.current = v;
-					setText(v);
-				}
-			},
-			[qd.mode],
-		),
-		dictationClaim && qd.mode === "text",
-	);
-
 	const toggle = (idx: number) => setSel(toggleOption(selectMode, sel, idx));
 
 	const nativeCanSubmit =
@@ -294,34 +267,19 @@ function QuestionDockForm({
 			: sel.dontKnow || (sel.otherSelected && other.trim().length > 0) || sel.selected.size > 0;
 
 	const canSubmit = !attachments.uploading && (nativeCanSubmit || hasPendingInput?.(qd) === true);
+	const formValues = useRef({ sel, other }); formValues.current = { sel, other };
 	const currentQuestion = useRef(qd); currentQuestion.current = qd;
 	const mounted = useRef(true);
 	useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-	const formValues = useRef({ sel, other }); formValues.current = { sel, other };
-	useLayoutEffect(() => {
-		if (!viewReader) return;
-		const read = (): NativeQuestionViewState => {
-			const { sel, other } = formValues.current;
-			return { question: qd, draft: { dontKnow: sel.dontKnow,
-				values: [...sel.selected].flatMap(index => qd.options[index] ? [qd.options[index]!.value] : []),
-				otherSelected: sel.otherSelected, other, text: answerTextRef.current, thinking: "" } };
-		};
-		viewReader.current = read;
-		return () => { if (viewReader.current === read) viewReader.current = null; };
-	}, [viewReader, qd, kind]);
-	const viewPresentationKey = JSON.stringify({ ...toClientQuestion(qd), questionType: qd.questionType });
-	useLayoutEffect(() => { viewReader?.changed?.(); }, [viewReader, sel, other, text, viewPresentationKey]);
+
+
 	const submit = () => {
 		if (!canSubmit || attachments.isUploading() || compactionRunning || preparing) return;
 		if (onPrepareSubmission) {
 			onPrepareSubmission({ question: qd, isCurrent: () => mounted.current && currentQuestion.current === qd && isInteractionScopeEligible(rootRef.current, controller), capture: captureRequest });
 			return;
 		}
-		if (!isDictationActive()) {
-			doSubmit();
-			return;
-		}
-		void finishDictation().then(doSubmit);
+		doSubmit();
 	};
 	const captureRequest = (): AnswerRequest => {
 		const { sel, other } = formValues.current;
@@ -607,13 +565,6 @@ function QuestionDockForm({
 							}}
 							onKeyDown={(e) => {
 								if (!isInteractionScopeEligible(e.currentTarget, controller)) return;
-								if (e.key === "Escape" && onEscape) {
-									e.preventDefault();
-									e.stopPropagation();
-									controller?.claimEscape(e);
-									onEscape();
-									return;
-								}
 								if (e.key === "Enter" && (e.metaKey || e.ctrlKey || !e.shiftKey)) {
 									e.preventDefault();
 									submit();

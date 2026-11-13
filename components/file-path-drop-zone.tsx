@@ -1,12 +1,12 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { FileSymlinkIcon,Loader2Icon,XIcon } from "@/components/ui/icons";
 import { usePathname } from "next/navigation";
-import { FileSymlinkIcon, Loader2Icon, XIcon } from "@/components/ui/icons";
-import { INSERT_FILE_PATHS_EVENT } from "./path-input";
+import { createContext,useCallback,useContext,useEffect,useRef,useState } from "react";
 import { uploadAttachmentFiles } from "./attachment-upload";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
+import { INSERT_FILE_PATHS_EVENT } from "./path-input";
 
 interface AttachmentUploads {
 	uploading: boolean;

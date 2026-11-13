@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
 
 export function useFieldCycle(fields: () => readonly HTMLElement[]) {
 	const controller = useOptionalInteractionLayers();

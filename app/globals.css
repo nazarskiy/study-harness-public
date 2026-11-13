@@ -493,14 +493,6 @@
 }
 
 
-.ow-plugin-scroll {
-	scrollbar-width: none;
-	overscroll-behavior: contain;
-}
-.ow-plugin-scroll::-webkit-scrollbar {
-	display: none;
-}
-
 .ow-source-passage {
 	scroll-margin-top: 1rem;
 }

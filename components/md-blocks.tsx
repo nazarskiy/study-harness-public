@@ -1,23 +1,22 @@
 "use client";
 
 
-import { cloneElement, createContext, isValidElement, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
-import { CheckIcon, CopyIcon, MaximizeIcon } from "@/components/ui/icons";
-import { cn } from "@/lib/utils";
-import {
-	CodeBlock,
-	extractTableDataFromElement,
-	tableDataToMarkdown,
-	useIsCodeFenceIncomplete,
-} from "streamdown";
-import type { ExtraProps } from "streamdown";
-import { MERMAID_FONT_SIZE, renderMermaid } from "@/components/mermaid-render";
-import { useAppearance } from "@/components/settings/appearance";
-import { MermaidError } from "@/components/mermaid-error";
 import { blurAfterPointerClick } from "@/components/focus-hygiene";
-import { chartSize, useSessionMermaid } from "@/components/session-overlay";
+import { MermaidError } from "@/components/mermaid-error";
+import { MERMAID_FONT_SIZE,renderMermaid } from "@/components/mermaid-render";
+import { chartSize,useSessionMermaid } from "@/components/session-overlay";
+import { useAppearance } from "@/components/settings/appearance";
 import { Hint } from "@/components/ui/hint";
-import { BUILTIN_MERMAID_LANGUAGE, PluginCodeBlock } from "@/components/plugin-renderers";
+import { CheckIcon,CopyIcon,MaximizeIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
+import { cloneElement,createContext,isValidElement,useContext,useEffect,useRef,useState,type ComponentProps,type ReactNode } from "react";
+import type { ExtraProps } from "streamdown";
+import {
+CodeBlock,
+extractTableDataFromElement,
+tableDataToMarkdown,
+useIsCodeFenceIncomplete,
+} from "streamdown";
 
 export const MarkdownDisplayOnlyContext = createContext(false);
 
@@ -91,12 +90,12 @@ export function codeSource(children: ReactNode): string {
 }
 
 function MermaidInline({ chart }: { chart: string }) {
+	const incomplete = useIsCodeFenceIncomplete();
 	const displayOnly = useContext(MarkdownDisplayOnlyContext);
 	const [svg, setSvg] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const [attempt, setAttempt] = useState(0);
 	const overlay = useSessionMermaid();
-	const incomplete = useIsCodeFenceIncomplete();
 	const { resolvedMode } = useAppearance();
 	const holderRef = useRef<HTMLDivElement>(null);
 	const [capW, setCapW] = useState<number | null>(null);
@@ -170,8 +169,8 @@ function MermaidInline({ chart }: { chart: string }) {
 }
 
 export function MarkdownCode(props: ComponentProps<"code"> & ExtraProps) {
-	const displayOnly = useContext(MarkdownDisplayOnlyContext);
 	const incomplete = useIsCodeFenceIncomplete();
+	const displayOnly = useContext(MarkdownDisplayOnlyContext);
 	const { children, className, node, ...rest } = props;
 
 	if (!("data-block" in props)) {
@@ -186,7 +185,7 @@ export function MarkdownCode(props: ComponentProps<"code"> & ExtraProps) {
 	const meta = (node?.properties?.metastring as string | undefined) ?? "";
 	const source = codeSource(children);
 
-	if (language === BUILTIN_MERMAID_LANGUAGE) return <MermaidInline chart={source} />;
+	if (language === "mermaid") return <MermaidInline chart={source} />;
 
 	const startMatch = /startLine=(\d+)/.exec(meta);
 	const startLine = startMatch ? Number.parseInt(startMatch[1]!, 10) : undefined;
@@ -204,7 +203,7 @@ export function MarkdownCode(props: ComponentProps<"code"> & ExtraProps) {
 			/>
 		</div>
 	);
-	return displayOnly ? fallback : <PluginCodeBlock language={language} source={source} meta={meta} incomplete={incomplete} fallback={fallback} />;
+	return fallback;
 }
 
 

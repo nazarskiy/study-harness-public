@@ -1,40 +1,25 @@
 
-import type { OwllyMessage } from "./native-messages.ts";
-import type { PluginAgentRecord } from "./plugin-agents.ts";
-import type { PluginTaskRecord } from "./plugin-workers.ts";
 import type {
-	ChatRecord,
-	ImageSnapshot,
-	ChatSettings,
-	ChatSummary,
-	GraphChain,
-	GraphNode,
-	JobKind,
-	JobRecord,
-	PluginJobMetadata,
-	ExtractionRunUsage,
-	PlanTree,
-	Position,
-	CoverageEntry,
-	SessionCheckpoint,
-	SideChatThread,
-	TurnUsage,
-	NotesSource,
+ChatRecord,
+ChatSettings,
+ChatSummary,
+CoverageEntry,
+ExtractionRunUsage,
+GraphChain,
+GraphNode,
+ImageSnapshot,
+JobKind,
+JobRecord,
+NotesSource,
+PlanTree,
+PluginJobMetadata,
+Position,
+SessionCheckpoint,
+SideChatThread,
+TurnUsage,
 } from "./contracts.ts";
+import type { OwllyMessage } from "./native-messages.ts";
 import type { UserSettings } from "./settings.ts";
-
-
-export interface PluginAgentRecordStore {
-	list(): PluginAgentRecord[];
-	get(id: string): PluginAgentRecord | null;
-	save(record: PluginAgentRecord): void;
-}
-
-export interface PluginTaskRecordStore {
-	list(): PluginTaskRecord[];
-	get(id: string): PluginTaskRecord | null;
-	save(record: PluginTaskRecord): void;
-}
 
 
 export interface ChatStore {

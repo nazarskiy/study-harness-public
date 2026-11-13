@@ -10,7 +10,6 @@ import type {
 	CompactionSettings,
 	CustomModelOverride,
 	GeneralSettings,
-	DictationSettings,
 	GraphSettings,
 	ModelsSettings,
 	ModelSlot,
@@ -19,7 +18,6 @@ import type {
 import { BACKGROUND_MODEL_ROLES, CACHE_RETENTIONS, COMPACTION_THRESHOLD_FLOOR, CUSTOM_MODEL_PIN_FLOOR, EXTRACTION_CHUNK_TOKENS_FLOOR, MODEL_SLOTS } from "../core/settings.ts";
 import { WRITABLE_TOOL_KEYS } from "../core/pending.ts";
 import { isSearchEngineId, SEARCH_ENGINES } from "../core/search.ts";
-import { isDictationLanguage } from "../core/dictation.ts";
 import { parseFileAccessSettings } from "../core/file-access.ts";
 
 export type SettingsBodyResult<T> =
@@ -289,14 +287,6 @@ export function parseCompactionSettingsBody(body: unknown): SettingsBodyResult<C
 	return { ok: true, settings };
 }
 
-export function parseDictationSettingsBody(body: unknown): SettingsBodyResult<DictationSettings> {
-	const raw = asRecord(body);
-	if (!raw) return { ok: false, error: "Invalid JSON body" };
-	if (raw.language === undefined) return { ok: true, settings: {} };
-	if (!isDictationLanguage(raw.language)) return { ok: false, error: "Unsupported dictation language" };
-	return { ok: true, settings: { language: raw.language } };
-}
-
 export function parseCustomModelOverridesBody(
 	body: unknown,
 ): SettingsBodyResult<Record<string, CustomModelOverride>> {
@@ -339,7 +329,6 @@ export const SETTINGS_SECTIONS = {
 	graph: parseGraphSettingsBody,
 	compaction: parseCompactionSettingsBody,
 	models: parseModelsSettingsBody,
-	dictation: parseDictationSettingsBody,
 	claudeCode: parseClaudeCodeSettingsBody,
 } as const;
 

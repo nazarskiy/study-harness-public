@@ -1,11 +1,10 @@
 "use client";
 
 import {
-	createContext, useContext, useId, useLayoutEffect, useRef, useState,
-	useSyncExternalStore, type ReactNode, type RefObject,
+createContext,useContext,useId,useLayoutEffect,useRef,useState,
+useSyncExternalStore,type ReactNode,type RefObject,
 } from "react";
 
-import { capturePluginQuestionKey, pluginQuestionKeySuppressed } from "./plugin-question-keys";
 
 export type LayerKind = "modal" | "popup" | "view";
 export type CloseReason = "escape" | "backdrop" | "outside" | "return-to" | "action" | "dismiss";
@@ -316,7 +315,6 @@ export function createInteractionLayers() {
 		},
 		captureKeyDown(event: KeyboardEvent) {
 			snapshotEscape(event);
-			capturePluginQuestionKey(event);
 			if (event.key === "Tab") event.preventDefault();
 		},
 		getEventOwner(event: KeyEvent): InteractionLayer | null { return snapshotEscape(event).owner; },
@@ -333,7 +331,7 @@ export function createInteractionLayers() {
 			const snapshot = snapshotEscape(event);
 			if (snapshot.dispatched) return null;
 			snapshot.dispatched = true;
-			if (event.defaultPrevented || snapshot.claimed || pluginQuestionKeySuppressed(event)) return null;
+			if (event.defaultPrevented || snapshot.claimed) return null;
 			if (!snapshot.owner) return null;
 			snapshot.claimed = true;
 			event.preventDefault();

@@ -1,24 +1,18 @@
 
-import { extractionStatuses, type ExtractionPhase } from "../agent/subagents/extraction.ts";
+import { extractionStatuses,type ExtractionPhase } from "../agent/subagents/extraction.ts";
+import type { JobRecord } from "../core/contracts.ts";
 import { chatStore } from "../store/chats.ts";
 import { graphRevision } from "./graph.ts";
-import { catalogContextLimits } from "./model-catalog.ts";
 import { listJobs } from "./jobs.ts";
+import { catalogContextLimits } from "./model-catalog.ts";
 import { jobCost } from "./pricing.ts";
-import { pluginWorkerActivities, type PluginWorkerActivity } from "./plugin-worker-activity.ts";
-import type { JobRecord } from "../core/contracts.ts";
 
-export { abortExtraction, extractionStatuses, type ExtractionPhase, type RunningExtraction } from "../agent/subagents/extraction.ts";
+export { abortExtraction,extractionStatuses,type ExtractionPhase,type RunningExtraction } from "../agent/subagents/extraction.ts";
 export { chatStore } from "../store/chats.ts";
 
 export interface ActivityJob extends JobRecord {
 	costUsd: number | null;
 	title: string;
-	contextLimit: number | null;
-}
-
-export interface ActivityPluginWorker extends PluginWorkerActivity {
-	costUsd: number | null;
 	contextLimit: number | null;
 }
 
@@ -33,7 +27,6 @@ export interface ActivityExtraction {
 
 export function activityFeed(): {
 	jobs: ActivityJob[];
-	pluginWorkers: ActivityPluginWorker[];
 	extractions: ActivityExtraction[];
 	graphRevision: number;
 } {
@@ -62,17 +55,9 @@ export function activityFeed(): {
 		phase: run.phase,
 		startedAt: run.startedAt,
 	}));
-	const linked = new Set(jobs.flatMap(job => job.kind === "plugin" && job.plugin?.taskId
-		? [`${job.plugin.pluginId}:${job.plugin.taskId}`] : []));
-	const pluginWorkers: ActivityPluginWorker[] = pluginWorkerActivities()
-		.filter(task => !linked.has(task.id))
-		.map(task => ({ ...task, costUsd: jobCost(task),
-			contextLimit: task.usage ? (limits.get(task.usage.model) ?? null) : null }))
-		.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 	jobs.sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
 	return {
 		jobs,
-		pluginWorkers,
 		extractions: extractions.sort((a, b) => a.startedAt - b.startedAt),
 		graphRevision: graphRevision(),
 	};

@@ -1,7 +1,6 @@
 
-import { ChatInputError, dismissAppends, emit } from "../core";
+import { ChatInputError,dismissAppends,emit } from "../core";
 import { assertPluginQuestionInputAllowed } from "../core/input-events.ts";
-import { preparePluginQuestionDismissal, type PluginQuestionDismissInput } from "./plugin-questions.ts";
 import type { ChatStore } from "../core/ports.ts";
 
 export type ParkedDismissal = unknown;
@@ -33,9 +32,7 @@ export function applyParkedDismissal(chatStore: ChatStore, chatId: string): void
 	if (!record) return;
 	try {
 		assertPluginQuestionInputAllowed(record.messages, input as { type: string });
-		const appends = (input as { type?: string }).type === "dismiss-plugin-question"
-			? preparePluginQuestionDismissal(record, input as PluginQuestionDismissInput)
-			: dismissAppends(record, input as Parameters<typeof dismissAppends>[1]);
+		const appends = dismissAppends(record, input as Parameters<typeof dismissAppends>[1]);
 		chatStore.saveMessages(chatId, [...record.messages, ...appends]);
 		emit("record-changed", { chatId });
 	} catch (err) {

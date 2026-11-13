@@ -1,9 +1,9 @@
 "use client";
 
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import type { ChatInput, OwllyMessage, QuestionAnswerData } from "@/src/core";
-import { SessionModel, type SessionState } from "@/components/session-core";
+import { SessionModel,type SessionState } from "@/components/session-core";
+import type { ChatInput,OwllyMessage,QuestionAnswerData } from "@/src/core";
+import { useCallback,useEffect,useMemo,useReducer,useRef } from "react";
 
 export interface UseChatSessionOptions {
 	chatId: string;
@@ -71,12 +71,11 @@ export function useChatSession({ chatId, initialMessages, initialError, initiall
 	);
 	const questionDraft = useCallback((questionKey: string) => model.questionDraft(questionKey), [model]);
 	const saveQuestionDraft = useCallback((questionKey: string, draft: Parameters<SessionModel["saveQuestionDraft"]>[1]) => model.saveQuestionDraft(questionKey, draft), [model]);
-	const setMessages = useCallback((record: OwllyMessage[], turnError?: string, availability?: Parameters<SessionModel["setMessages"]>[2], problemAvailability?: Parameters<SessionModel["setMessages"]>[3]) => model.setMessages(record, turnError, availability, problemAvailability), [model]);
+	const setMessages = useCallback((record: OwllyMessage[], turnError?: string) => model.setMessages(record, turnError), [model]);
 	const reconcile = useCallback(() => model.reconcile(), [model]);
 	const readRecord = useCallback((options?: Parameters<SessionModel["readRecord"]>[0]) => model.readRecord(options), [model]);
-	const pluginProblemDraft = useCallback((snapshot: Parameters<SessionModel["pluginProblemDraft"]>[0]) => model.pluginProblemDraft(snapshot), [model]);
-	const pluginQuestionDraft = useCallback((snapshot: Parameters<SessionModel["pluginQuestionDraft"]>[0]) => model.pluginQuestionDraft(snapshot), [model]);
-	const dismissPluginQuestion = useCallback((occurrence: Parameters<SessionModel["dismissPluginQuestion"]>[0], questionId?: string) => model.dismissPluginQuestion(occurrence, questionId), [model]);
+
+
 	const adoptRecord = useCallback((record: OwllyMessage[]) => model.adoptRecord(record), [model]);
 	const stop = useCallback(() => model.stop(), [model]);
 	const clearError = useCallback(() => model.clearError(), [model]);
@@ -89,11 +88,8 @@ export function useChatSession({ chatId, initialMessages, initialError, initiall
 		reconciliation: state.reconciliation,
 		reconcile,
 		readRecord,
-		pluginQuestionAvailability: state.pluginQuestionAvailability,
-		pluginProblemAvailability: state.pluginProblemAvailability,
-		pluginProblemDraft,
-		pluginQuestionDraft,
-		dismissPluginQuestion,
+
+
 		hasConfirmedConversation: state.hasConfirmedConversation,
 		contextTokens: state.contextTokens,
 		status: state.status,

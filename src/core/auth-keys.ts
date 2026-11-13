@@ -8,12 +8,6 @@ export interface AuthKeyInfo {
 
 export const AUTH_KEYS: readonly AuthKeyInfo[] = [
 	{
-		id: "DEEPGRAM_API_KEY",
-		label: "Deepgram",
-		description: "Speech-to-text key for dictation — needs ≥ Member permission in the Deepgram console to mint tokens.",
-		docsUrl: "https://console.deepgram.com/",
-	},
-	{
 		id: "TAVILY_API_KEY",
 		label: "Tavily",
 		description: "Web-search engine for the researcher sub-agent (AI-native search API). Setting the key activates it — no engine toggle needed.",
@@ -129,8 +123,6 @@ export function validateKeyShape(id: string, rawValue: string): KeyShapeResult {
 			return value.startsWith("fc-")
 				? nonEmpty(20)
 				: { ok: false, error: `${id} must start with "fc-" (Firecrawl's key format)` };
-		case "DEEPGRAM_API_KEY":
-			return nonEmpty(20);
 		default:
 			return { ok: false, error: `unknown key "${id}" (supported: ${[...AUTH_KEY_IDS].join(", ")})` };
 	}

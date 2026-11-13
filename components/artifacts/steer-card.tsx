@@ -1,14 +1,12 @@
 "use client";
 
-import { CircleX } from "@/components/ui/icons";
-import type { PdfResult, ResearchResult, SubagentArtifactData } from "@/src/core";
-import type { OwllyViewMessage, PluginBackgroundResult, SubagentResultMeta } from "@/src/core";
-import { isSubagentFailure } from "@/src/core";
 import { DemoOutputCard } from "@/components/artifacts/demo-card";
-import { PdfBriefCard, ResearchBriefCard } from "@/components/artifacts/job-card";
+import { PdfBriefCard,ResearchBriefCard } from "@/components/artifacts/job-card";
 import { VisualOutputCard } from "@/components/artifacts/visual-card";
-import { PluginWorkerCard } from "@/components/artifacts/plugin-worker-card";
 import { WorkerResultDetails } from "@/components/artifacts/worker-result-presentation";
+import { CircleX } from "@/components/ui/icons";
+import type { OwllyViewMessage,PdfResult,ResearchResult,SubagentArtifactData } from "@/src/core";
+import { isSubagentFailure } from "@/src/core";
 
 export function SubagentSteerCard({ message }: { message: OwllyViewMessage }) {
 	const artifactPart = message.parts.find((p) => p.type === "data-subagent-artifact");
@@ -31,10 +29,7 @@ export function SubagentSteerCard({ message }: { message: OwllyViewMessage }) {
 		);
 	}
 	switch (data.kind) {
-		case "plugin": {
-			const meta = (message.metadata as { subagentResult?: SubagentResultMeta } | undefined)?.subagentResult;
-			return <PluginWorkerCard result={data.result as PluginBackgroundResult} toolCallId={meta?.toolCallId ?? ""} />;
-		}
+		case "plugin": return null;
 		case "research":
 			return isSubagentFailure("research", data.result as ResearchResult) ? (
 				<ResearchBriefCard output={data.result} />

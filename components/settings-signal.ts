@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 
 export const SETTINGS_SAVED_EVENT = "owlly:settings-saved";
 
-export type SettingsSection = "general" | "keys" | "agent" | "models" | "appearance" | "graph" | "compaction" | "dictation" | "claudeCode";
+export type SettingsSection = "general" | "keys" | "agent" | "models" | "appearance" | "graph" | "compaction" | "claudeCode";
 
 export function notifySettingsSaved(section: SettingsSection): void {
 	window.dispatchEvent(

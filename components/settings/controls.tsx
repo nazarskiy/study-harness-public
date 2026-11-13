@@ -16,7 +16,7 @@ export function SettingsSection({
 	testid?: string;
 }) {
 	return (
-		<section data-testid={testid} className="px-6 py-6">
+		<section data-testid={testid} className="settings-section px-6 py-6">
 			<h2 className="text-xl font-extrabold text-foreground">{title}</h2>
 			{hint && <p className="mt-1 text-sm text-muted-foreground">{hint}</p>}
 			<div className="mt-5 flex flex-col gap-3">{children}</div>
@@ -34,7 +34,7 @@ export function SettingsGroup({
 	testid?: string;
 }) {
 	return (
-		<div data-testid={testid} className="mt-4 rounded-2xl border-2 border-border bg-card p-4 first:mt-0">
+		<div data-testid={testid} className="settings-group mt-4 rounded-2xl border-2 border-border bg-card p-4 first:mt-0">
 			<p className="mb-3 text-sm font-extrabold text-muted-foreground">{label}</p>
 			<div className="flex flex-col gap-2">{children}</div>
 		</div>
@@ -55,7 +55,7 @@ export function SettingsRow({
 	dimmed?: boolean;
 }) {
 	return (
-		<div data-testid={testid} className={cn("flex items-center justify-between gap-4 py-1.5", dimmed && "opacity-40")}>
+		<div data-testid={testid} className={cn("settings-row flex items-center justify-between gap-4 py-1.5", dimmed && "opacity-40")}>
 			<span className="min-w-0">
 				<span className="block text-base font-bold">{label}</span>
 				{hint && <span className="block text-sm text-muted-foreground">{hint}</span>}

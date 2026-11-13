@@ -1,20 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatSettings, ModelCatalogEntry, ModelCatalogResponse, ModelsSettings, UserSettings } from "@/src/core";
-import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
-import { CpuIcon, ChevronDownIcon, CheckIcon } from "@/components/ui/icons";
-import { prettyModel } from "@/components/usage-format";
-import { ModelMenuList } from "@/components/settings/model-menu";
-import { composeSlotModel } from "@/components/settings/agent-section";
-import { MenuShell } from "@/components/menu-shell";
+import { isInputShortcutScopeEligible } from "@/components/interaction-focus";
 import { useInteractionLayers } from "@/components/interaction-layers";
-import { isInputShortcutScopeEligible } from "@/components/plugin-input-focus";
-import { Hint } from "@/components/ui/hint";
-import { notifySettingsSaved, useSettingsSaved } from "@/components/settings-signal";
+import { MenuShell } from "@/components/menu-shell";
 import { useModelCatalog } from "@/components/model-catalog";
+import { notifySettingsSaved,useSettingsSaved } from "@/components/settings-signal";
+import { composeSlotModel } from "@/components/settings/agent-section";
+import { ModelMenuList } from "@/components/settings/model-menu";
+import { defaultOrderLevel,populateLevel,THINKING_LABEL } from "@/components/thinking-default";
+import { Hint } from "@/components/ui/hint";
+import { CheckIcon,ChevronDownIcon,CpuIcon } from "@/components/ui/icons";
+import { prettyModel } from "@/components/usage-format";
+import type { ChatSettings,ModelCatalogEntry,ModelCatalogResponse,ModelsSettings,UserSettings } from "@/src/core";
+import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
+import { useCallback,useEffect,useRef,useState } from "react";
 export { useModelCatalog } from "@/components/model-catalog";
-import { defaultOrderLevel, populateLevel, THINKING_LABEL } from "@/components/thinking-default";
 
 export function catalogLimits(catalog: Pick<ModelCatalogResponse, "models">): Map<string, number> {
 	return new Map(catalog.models.flatMap((m) => m.contextWindow === null ? [] : [[`${m.provider}:${m.id}`, m.contextWindow] as const]));

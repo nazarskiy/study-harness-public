@@ -2,25 +2,21 @@
 
 import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { SurfaceRegion, usePageSurfaceBoundary, useSurfaceChromeStyle } from "./plugin-surfaces";
-import { Conversation, ConversationContent, ConversationEmptyState } from "@/components/ai-elements/conversation";
-import { Composer } from "@/components/composer";
-import { DictationBar, joinDictation, useDictation } from "@/components/dictation";
-import { useFieldCycle } from "@/components/field-cycle";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { SidebarToggle } from "@/components/sidebar";
-import { SetupDialog } from "@/components/setup-dialog";
-import { useModelSetup, selectedModelUnavailable, openModelPicker, ZeroKeysPill } from "@/components/setup-cta";
-import { SessionModeCards } from "@/components/session-mode-cards";
-import { StatsBar } from "@/components/stats-bar";
+import { Conversation,ConversationContent,ConversationEmptyState } from "@/components/ai-elements/conversation";
 import { ChainTableOverlay } from "@/components/chain-table.tsx";
-import { ComposerActions, NodePickerControl } from "@/components/composer-actions";
+import { Composer } from "@/components/composer";
+import { ComposerActions,NodePickerControl } from "@/components/composer-actions";
+import { useFieldCycle } from "@/components/field-cycle";
 import { OPENING_PROMPT_FAILURE } from "@/components/opening-prompt";
+import { SessionModeCards } from "@/components/session-mode-cards";
+import { openModelPicker,selectedModelUnavailable,useModelSetup,ZeroKeysPill } from "@/components/setup-cta";
+import { SetupDialog } from "@/components/setup-dialog";
+import { SidebarToggle } from "@/components/sidebar";
 import { SessionStarter } from "@/components/start-session";
-import type { ChatSettings, GraphSnapshot } from "@/src/core";
+import { StatsBar } from "@/components/stats-bar";
+import type { GraphSnapshot } from "@/src/core";
+import { usePathname,useRouter } from "next/navigation";
+import { useCallback,useRef,useState,type ReactNode } from "react";
 
 export type DraftPick = { id: string; name: string; statement: string };
 
@@ -71,39 +67,22 @@ export function DraftShell({
 	onClearPicks?: () => void;
 	overlay?: ReactNode;
 }) {
-	const controller = useOptionalInteractionLayers();
 	const pathname = usePathname();
 	const router = useRouter();
 	const bodyRef = useRef<HTMLDivElement>(null);
-	const surfaceTarget = usePageSurfaceBoundary({ active: pathname === "/chat/new", viewKey: "/chat/new", bodyRef });
-	const chromeStyle = useSurfaceChromeStyle(surfaceTarget);
+
+
 	const cycleComposer = useCallback((): readonly HTMLElement[] =>
 		Array.from(document.querySelectorAll<HTMLElement>('[data-testid="composer"] [data-file-path-input]')),
 		[]);
 	useFieldCycle(cycleComposer);
-	const dictation = useDictation({
-		append: (t) => onChange(joinDictation(text, t)),
-	});
 	const attachments = useAttachmentUploads();
-	const canSend = !attachments.uploading && (text.trim().length > 0 || dictation.active);
+	const canSend = !attachments.uploading && text.trim().length > 0;
 	const handleSend = () => {
 		if (attachments.isUploading()) return;
-		if (dictation.active) {
-			void dictation.finish().then(() => { if (!attachments.isUploading()) onSend(); });
-			return;
-		}
 		onSend();
 	};
 	const composerInputRef = useRef<HTMLDivElement>(null);
-	const dictationWasActiveRef = useRef(false);
-	useEffect(() => {
-		if (dictation.active) {
-			dictationWasActiveRef.current = true;
-		} else if (dictationWasActiveRef.current) {
-			dictationWasActiveRef.current = false;
-			if (isInteractionScopeEligible(composerInputRef.current, controller)) composerInputRef.current!.focus();
-		}
-	}, [dictation.active, controller]);
 	return (
 		<div className="relative flex h-dvh">
 			<div className="flex min-w-0 flex-1 flex-col">
@@ -137,7 +116,6 @@ export function DraftShell({
 								<div data-attachment-composer="" className="pointer-events-auto overflow-hidden rounded-2xl border-2 bg-card shadow-lg">
 
 									<Composer
-										dictationSlot={<DictationBar dictation={dictation} iconOnly />}
 										busy={busy}
 										value={text}
 										onChange={onChange}
@@ -146,7 +124,6 @@ export function DraftShell({
 										canSend={canSend}
 										inputRef={composerInputRef}
 										autoFocus
-										onEscape={dictation.active ? dictation.cancel : undefined}
 										placeholder={mode === "practice" ? "What would you like to challenge yourself with?" : "What do you want to learn?"}
 									/>
 								</div>
@@ -156,14 +133,14 @@ export function DraftShell({
 							</div>
 						</div>
 					</div>
-					<SurfaceRegion target={surfaceTarget}>
+					<div className="pointer-events-none absolute inset-0">
 						<div className="contents pointer-events-auto">{overlay}</div>
-					</SurfaceRegion>
+					</div>
 				</div>
 			</div>
 			{
 }
-			<header style={chromeStyle} className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2">
+			<header className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2">
 				<div className="pointer-events-auto">
 					<SidebarToggle />
 				</div>

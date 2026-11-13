@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { CITATION_MAX_COMMENT_LENGTH } from "@/src/core";
-import { Button } from "./ui/button";
+import { useEffect,useRef,useState } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
+import { Button } from "./ui/button";
 
 
 export type CommentDismissal = "escape" | "outside" | "focus-out";

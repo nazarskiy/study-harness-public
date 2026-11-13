@@ -2,22 +2,20 @@
 
 import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import type { ViewReaderRef } from "./session-view-readers";
-import { ChevronRightIcon } from "@/components/ui/icons";
 import { ToolContentResponse } from "@/components/ai-elements/message";
-import { Button } from "@/components/ui/button";
-import { joinDictation, useDictationTarget } from "@/components/dictation";
 import { useEnterSubmits } from "@/components/enter-submits";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
 import { PathInput } from "@/components/path-input";
-import type { PrepareThinkingSubmission } from "./plugin-submission-adapters";
+import { Button } from "@/components/ui/button";
+import { ChevronRightIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
+import { useRef,useState,type ReactNode } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useOptionalInteractionLayers } from "./interaction-layers";
+import type { PrepareThinkingSubmission } from "./submission-adapters";
 
 
 export interface PracticeDockProps {
-	viewReader?: ViewReaderRef<string>;
+
 	problemCallId: string;
 	input: { statement: string };
 	expanded: boolean;
@@ -31,11 +29,10 @@ export interface PracticeDockProps {
 	};
 	hasPendingInput?: boolean;
 	preparing?: boolean;
-	onEscape?: () => void;
 	compactionRunning?: boolean;
 }
 
-export function PracticeDock({ viewReader, problemCallId, input, expanded, onExpand, onSubmit, onPrepareSubmission, customInput, hasPendingInput = false, preparing = false, onEscape, compactionRunning = false }: PracticeDockProps) {
+export function PracticeDock({ problemCallId, input, expanded, onExpand, onSubmit, onPrepareSubmission, customInput, hasPendingInput = false, preparing = false, compactionRunning = false }: PracticeDockProps) {
 	const attachments = useAttachmentUploads();
 	const controller = useOptionalInteractionLayers();
 	const rootRef = useRef<HTMLElement>(null);
@@ -45,26 +42,8 @@ export function PracticeDock({ viewReader, problemCallId, input, expanded, onExp
 	const setThinking = (value: string) => { if (!custom.current) setNativeThinking(value); };
 	const thinkingRef = useRef(thinking); thinkingRef.current = thinking;
 	const editRevision = useRef(0);
-	useLayoutEffect(() => {
-		if (!viewReader) return;
-		const read = () => thinkingRef.current;
-		viewReader.current = read;
-		return () => { if (viewReader.current === read) viewReader.current = null; };
-	}, [viewReader]);
 
-	useDictationTarget(
-		useCallback(
-			(t: string) => {
-				const v = joinDictation(thinkingRef.current, t);
-				thinkingRef.current = v; editRevision.current++;
-				setThinking(v);
-			},
-			[],
-		),
-		!customInput,
-	);
 
-	useLayoutEffect(() => { viewReader?.changed?.(); }, [viewReader, thinking]);
 	const submit = () => {
 		if (attachments.isUploading() || compactionRunning || preparing) return;
 		const prepare = customInput?.prepare ?? onPrepareSubmission;
@@ -131,13 +110,6 @@ export function PracticeDock({ viewReader, problemCallId, input, expanded, onExp
 					}}
 					onKeyDown={(e) => {
 						if (!isInteractionScopeEligible(e.currentTarget, controller)) return;
-						if (e.key === "Escape" && onEscape) {
-							controller?.claimEscape(e);
-							e.preventDefault();
-							e.stopPropagation();
-							onEscape();
-							return;
-						}
 						if (e.key === "Enter" && (!e.shiftKey || e.metaKey || e.ctrlKey)) {
 							e.preventDefault();
 							submit();

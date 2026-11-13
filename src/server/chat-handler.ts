@@ -1,81 +1,80 @@
 import type { Usage } from "@earendil-works/pi-ai";
-import {
-	createPracticeAgent,
-	createProberAgent,
-	createTeacherAgent,
-	type AgentBuildOptions,
-	type TeachingAgent,
-} from "../agent/teacher-agent.ts";
-import { piEngineForSpec, type PiEngine } from "../agent/models.ts";
-import { connectionBackgroundAllowed as subscriptionBackgroundAllowed, connectionScopeCurrent, isSubscriptionProvider } from "../agent/subscription-connections.ts";
-import { nativeSubscriptionError } from "../agent/subscription-stream.ts";
-import { chatGPTStreamError } from "../agent/chatgpt-stream.ts";
-import { SubscriptionRequestCycle, type SubscriptionDispatchLifecycle } from "../agent/subscription-request-cycle.ts";
-import { reconstructRequestCause } from "../core/native-messages.ts";
-import { createJobRunner } from "../agent/subagents/runner.ts";
-import { createExtractionPipeline } from "../agent/subagents/extraction.ts";
 import type { ModelRole } from "../../config.ts";
-import {
-	deliverJobResult,
-	noteSteersDurable,
-	reconcileUserSteers,
-	registerLiveAgent,
-	restoreUncommittedAutomatic,
-	setTurnRunner,
-	settleSteers,
-	steerLiveChat,
-	unregisterLiveAgent,
-} from "./jobs.ts";
-import { runPiTurn } from "./pi/ui-stream.ts";
-import { setFileAccessPolicy } from "../agent/tools/file-access.ts";
-import { fileAccessPolicy } from "./file-access.ts";
-import { collectToolCallIds } from "./pi/call-ids.ts";
+import { chatGPTStreamError } from "../agent/chatgpt-stream.ts";
+import { piEngineForSpec,type PiEngine } from "../agent/models.ts";
 import { providerEventNote } from "../agent/provider-events.ts";
-import { effectiveSettings, stores } from "./stores.ts";
-import { getPluginAgentContributions, getPluginHost } from "./plugins.ts";
-import { preparePluginQuestionSubmission, reconcilePluginQuestionCompatibility, type QuestionTypeResolver } from "./plugin-questions.ts";
-import { searchAvailable, searchProvider } from "./search.ts";
-import { prepareSubmissionImages, prepareSubmissionImageChannels, prepareProblemSubmissionImageChannels, submissionImagePolicyKey } from "./submission-images.ts";
-import { preparePluginProblemSubmission, requirePluginProblemTarget, type ProblemTypeResolver } from "./plugin-problems.ts";
-import { providerKeyPresent } from "./keys.ts";
+import { createExtractionPipeline } from "../agent/subagents/extraction.ts";
+import { createJobRunner } from "../agent/subagents/runner.ts";
+import { connectionScopeCurrent,isSubscriptionProvider,connectionBackgroundAllowed as subscriptionBackgroundAllowed } from "../agent/subscription-connections.ts";
+import { SubscriptionRequestCycle,type SubscriptionDispatchLifecycle } from "../agent/subscription-request-cycle.ts";
+import { nativeSubscriptionError } from "../agent/subscription-stream.ts";
+import {
+createPracticeAgent,
+createProberAgent,
+createTeacherAgent,
+type AgentBuildOptions,
+type TeachingAgent,
+} from "../agent/teacher-agent.ts";
+import { setFileAccessPolicy } from "../agent/tools/file-access.ts";
+import { reconstructRequestCause } from "../core/native-messages.ts";
+import { fileAccessPolicy } from "./file-access.ts";
+import {
+deliverJobResult,
+noteSteersDurable,
+reconcileUserSteers,
+registerLiveAgent,
+restoreUncommittedAutomatic,
+settleSteers,
+setTurnRunner,
+unregisterLiveAgent
+} from "./jobs.ts";
+import { collectToolCallIds } from "./pi/call-ids.ts";
+import { runPiTurn } from "./pi/ui-stream.ts";
+import { effectiveSettings,stores } from "./stores.ts";
+
+
+import { searchAvailable,searchProvider } from "./search.ts";
+import { prepareSubmissionImageChannels,prepareSubmissionImages,submissionImagePolicyKey } from "./submission-images.ts";
+
 import { CLAUDE_CODE_PROVIDER } from "../core/contracts/claude-code.ts";
+import { hasProbeDone,hasUnresolvedQuestion } from "../core/native-messages.ts";
 import {
-	extractionEnabled,
-	graphToolsEnabled,
-	resolveConversationSpec,
-	resolveRoleSpec,
+extractionEnabled,
+graphToolsEnabled,
+resolveConversationSpec,
+resolveRoleSpec,
 } from "../core/settings-resolution.ts";
-import { modelsNotConfigured, providerKeyMissing as providerKeyMissingEnvelope, ROLE_SLOT, type ModelSlotName, type ProviderKeyMissing } from "../core/settings.ts";
-import { beginTurn, endTurn, isTurnRunning } from "./turn-liveness.ts";
-import { claimPreparingTurn, type TurnPreparation } from "./turn-preparation.ts";
-import { applyParkedDismissal } from "./dismissal-park.ts";
+import { modelsNotConfigured,providerKeyMissing as providerKeyMissingEnvelope,ROLE_SLOT,type ModelSlotName } from "../core/settings.ts";
 import { sideConversationEntries } from "../core/side-chat.ts";
-import { sideChats, type SideChatService } from "./side-chat.ts";
-import { SIDE_CONTEXT_BUDGET_ERROR, sideBudgetRetryDrops, sideContextWindow } from "./side-context-budget.ts";
-import { registerTurn, rememberTurnFailure, unregisterTurn } from "./turn-runs.ts";
-import { persistTurn, triggerExtraction, TurnPersistenceError } from "./turn-service.ts";
-import { hasProbeDone, hasUnresolvedQuestion, pendingPluginQuestionOf, pluginQuestionCallsOf, questionCallsOf } from "../core/native-messages.ts";
-import { samePluginQuestionOccurrence } from "../core/plugin-questions.ts";
+import { applyParkedDismissal } from "./dismissal-park.ts";
+import { providerKeyPresent } from "./keys.ts";
+import { sideChats,type SideChatService } from "./side-chat.ts";
+import { SIDE_CONTEXT_BUDGET_ERROR,sideBudgetRetryDrops,sideContextWindow } from "./side-context-budget.ts";
+import { beginTurn,endTurn,isTurnRunning } from "./turn-liveness.ts";
+import { type TurnPreparation } from "./turn-preparation.ts";
+import { registerTurn,rememberTurnFailure,unregisterTurn } from "./turn-runs.ts";
+import { persistTurn,triggerExtraction,TurnPersistenceError } from "./turn-service.ts";
+
 import { composeInstructions } from "../agent/teacher-agent.ts";
-import { ensureCompacted, kickCompaction, effectiveThresholdTokens, projectedContextTokens, compactionInFlight } from "./compaction.ts";
 import { COMPACTION_RESERVE_TOKENS } from "../core/compaction.ts";
-import { catalogContextLimits, refreshConnectionCatalog } from "./model-catalog.ts";
-import { emit } from "../core/events.ts";
-import { settledTurnResponse } from "./turn-runs.ts";
-import { asAgentMessages, type OwllyMessage } from "../core/native-messages.ts";
-import { QUESTION_TOOLS } from "../core/pending.ts";
-import {
-	ChatInputError,
-	assertPluginQuestionInputAllowed,
-	assertNativeSubmissionTarget,
-	inputAppends,
-	parseChatInput,
-	questionRecoveryAppends,
-	retryDrops,
-	type TurnInput,
-} from "../core/input-events.ts";
+import type { CallUsage } from "../core/contracts.ts";
 import { steerDelivered } from "../core/contracts.ts";
-import type {CallUsage} from "../core/contracts.ts";
+import { emit } from "../core/events.ts";
+import {
+assertNativeSubmissionTarget,
+assertPluginQuestionInputAllowed,
+ChatInputError,
+inputAppends,
+parseChatInput,
+questionRecoveryAppends,
+retryDrops,
+type TurnInput,
+} from "../core/input-events.ts";
+import { asAgentMessages,type OwllyMessage } from "../core/native-messages.ts";
+import { QUESTION_TOOLS } from "../core/pending.ts";
+import { compactionInFlight,effectiveThresholdTokens,ensureCompacted,kickCompaction,projectedContextTokens } from "./compaction.ts";
+import { catalogContextLimits,refreshConnectionCatalog } from "./model-catalog.ts";
+import { settledTurnResponse } from "./turn-runs.ts";
 
 
 function connectionBackgroundAllowed(provider: string): boolean {
@@ -152,7 +151,8 @@ export async function handleChatInput(
 	buildAgent?: (opts: AgentBuildOptions & { teaching: boolean }) => TeachingAgent,
 	sideContext: Pick<SideChatService, "snapshot"> = sideChats,
 ): Promise<Response> {
-	await reconcilePluginQuestionCompatibility(stores.chatStore, chatId);
+
+	if (input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") return Response.json({ error: "Unsupported input type" }, { status: 400 });
 	const initialRecord = stores.chatStore.getChat(chatId);
 	if (!initialRecord) {
 		return Response.json({ error: "Unknown chat" }, { status: 404 });
@@ -160,37 +160,18 @@ export async function handleChatInput(
 	let record = initialRecord;
 
 	const capturedSession = { createdAt: record.createdAt, kind: record.kind };
-	const freshSubmission = input.type === "text" || input.type === "thinking" || input.type === "answer" || input.type === "plugin-question-answer" || input.type === "plugin-problem-submission";
+	const freshSubmission = input.type === "text" || input.type === "thinking" || input.type === "answer";
 	try {
 		assertPluginQuestionInputAllowed(record.messages, input);
 		if (input.type !== "steers") assertNativeSubmissionTarget(record.messages, input);
-		if (input.type === "plugin-problem-submission") requirePluginProblemTarget(record, input);
-		if (input.type === "plugin-question-answer") {
-			const pending = pendingPluginQuestionOf(record.messages);
-			if (!pending || pending.questionId !== input.questionId || !samePluginQuestionOccurrence(pending.occurrence, input.occurrence))
-				throw new ChatInputError("This question is no longer pending. Sync the saved session before trying again.");
-		}
+
+
 	}
 	catch (err) {
 		if (err instanceof ChatInputError) return Response.json({ error: err.message }, { status: 400 });
 		throw err;
 	}
-	if ((input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") && isTurnRunning(chatId))
-		return Response.json({ error: "A turn is already running for this session" }, { status: 409 });
-	let questionResolver: QuestionTypeResolver | undefined;
-	let problemResolver: ProblemTypeResolver | undefined;
-	if (input.type === "plugin-problem-submission") {
-		try {
-			const host = await getPluginHost();
-			problemResolver = (pluginId, typeId, version) => host.resolveProblemType(pluginId, typeId, version);
-		} catch { return Response.json({ error: "Problem unavailable" }, { status: 400 }); }
-	}
-	if (input.type === "plugin-question-answer") {
-		try {
-			const host = await getPluginHost();
-			questionResolver = (pluginId, typeId, version) => host.resolveQuestionType(pluginId, typeId, version);
-		} catch { return Response.json({ error: "Question unavailable" }, { status: 400 }); }
-	}
+
 
 	if (input.type === "retry") {
 		try {
@@ -257,12 +238,8 @@ export async function handleChatInput(
 			case "answer":
 				input = { ...input, answer: { ...input.answer, images: await prepareSubmissionImageChannels(input.answer.images, conversationEngine) } };
 				break;
-			case "plugin-problem-submission":
-				input = { ...input, images: await prepareProblemSubmissionImageChannels(input.images, conversationEngine) };
-				break;
-			case "plugin-question-answer":
-				input = { ...input, images: await prepareSubmissionImageChannels(input.images, conversationEngine) };
-				break;
+
+
 		}
 	} catch (err) {
 		if (err instanceof ChatInputError) return Response.json({ error: err.message }, { status: 400 });
@@ -296,19 +273,7 @@ export async function handleChatInput(
 			systemPromptTokens,
 			projectMessages: (current) => {
 				try {
-					if (input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") {
-						if (input.type === "plugin-question-answer") {
-							const pending = pendingPluginQuestionOf(current.messages);
-							if (!pending || pending.questionId !== input.questionId || !samePluginQuestionOccurrence(pending.occurrence, input.occurrence)) return current.messages;
-							if (questionCallsOf(current.messages).length || pluginQuestionCallsOf(current.messages).some(call =>
-								(call.status === "answerable" || call.status === "unreadable") && !samePluginQuestionOccurrence(call.occurrence, pending.occurrence))) return current.messages;
-						} else {
-							requirePluginProblemTarget(current, input);
-							if (hasUnresolvedQuestion(current.messages)) return current.messages;
-						}
-						const updates = sideConversationEntries({ messages: current.messages, sideChats: sideContext.snapshot(chatId) });
-						return updates.length ? [...current.messages, ...updates] : current.messages;
-					}
+
 					const next = input.type === "steers" ? input.steers.filter((entry) => !steerDelivered(current.messages, entry.id)) : inputAppends(current, input);
 					const after = [...current.messages, ...next];
 					if (hasUnresolvedQuestion(after)) return current.messages;
@@ -325,13 +290,8 @@ export async function handleChatInput(
 		},
 		chatId,
 	);
-	let pluginContributions: AgentBuildOptions["pluginContributions"];
-	if (!buildAgent) {
-		try { pluginContributions = await getPluginAgentContributions(); }
-		catch (error) {
-			console.error("[plugins] Agent contributions unavailable:", error);
-		}
-	}
+
+
 	const compactedRecord = stores.chatStore.getChat(chatId);
 	if (!compactedRecord) return Response.json({ error: "Unknown chat" }, { status: 404 });
 	record = compactedRecord;
@@ -348,11 +308,8 @@ export async function handleChatInput(
 			}
 			assertPluginQuestionInputAllowed(record.messages, input);
 			if (input.type !== "steers") assertNativeSubmissionTarget(record.messages, input);
-			if (input.type === "plugin-problem-submission") requirePluginProblemTarget(record, input);
-			if (input.type === "plugin-question-answer") {
-				const pending = pendingPluginQuestionOf(record.messages);
-				if (!pending || pending.questionId !== input.questionId || !samePluginQuestionOccurrence(pending.occurrence, input.occurrence)) return false;
-			}
+
+
 		} catch { return false; }
 		return true;
 	};
@@ -381,27 +338,8 @@ export async function handleChatInput(
 		assertPluginQuestionInputAllowed(record.messages, input);
 		if (compactionInFlight(chatId))
 			return Response.json({ error: "A turn is already running for this session" }, { status: 409 });
-		if ((input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") && isTurnRunning(chatId))
-			return Response.json({ error: "A turn is already running for this session" }, { status: 409 });
-		if (input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") {
-			const questionSubmission = input.type === "plugin-question-answer" ? preparePluginQuestionSubmission({ id: chatId, messages: record.messages }, input, questionResolver!) : undefined;
-			const problemSubmission = input.type === "plugin-problem-submission" ? preparePluginProblemSubmission(record, input, problemResolver!) : undefined;
-			const submission = questionSubmission ?? problemSubmission!;
-			const work = questionSubmission?.grade ?? problemSubmission?.process;
-			if (work) {
-				const claim = claimPreparingTurn(chatId);
-				if (!claim) return Response.json({ error: "A turn is already running for this session" }, { status: 409 });
-				preparation = claim;
-				turnClaimed = true;
-				const outcome = await work(preparation.signal);
-				const current = stores.chatStore.getChat(chatId);
-				if (!current || !preparation.isCurrent()) return staleSubmission();
-				record = current;
-				if (!submissionIsCurrent(false)) return staleSubmission();
-				preparation.signal.throwIfAborted();
-				appends = submission.finish({ id: chatId, kind: record.kind, messages: record.messages }, outcome);
-			} else appends = submission.finish({ id: chatId, kind: record.kind, messages: record.messages });
-		} else appends = input.type === "steers"
+
+		appends = input.type === "steers"
 			? input.steers.filter((s) => !steerDelivered(record.messages, s.id))
 			: inputAppends(record, input);
 	} catch (err) {
@@ -411,7 +349,7 @@ export async function handleChatInput(
 		throw err;
 	}
 
-	if ((input.type === "answer" || input.type === "plugin-question-answer") && hasUnresolvedQuestion([...record.messages, ...appends])) {
+	if ((input.type === "answer") && hasUnresolvedQuestion([...record.messages, ...appends])) {
 		const merged = [...record.messages, ...appends];
 		try { stores.chatStore.saveMessages(chatId, merged); inputSaved = true; }
 		catch (err) {
@@ -434,7 +372,7 @@ export async function handleChatInput(
 	const sideQuestions = hasUnresolvedQuestion(afterInput) ? [] : sideConversationEntries({
 		messages: record.messages, sideChats: sideContextSnapshots,
 	}, afterInput);
-	const withSideQuestions = input.type === "answer" || input.type === "retry-question" || input.type === "plugin-question-answer" ? [...appends, ...sideQuestions] : [...sideQuestions, ...appends];
+	const withSideQuestions = input.type === "answer" || input.type === "retry-question" ? [...appends, ...sideQuestions] : [...sideQuestions, ...appends];
 	const prospective = [...record.messages, ...withSideQuestions].filter((message) => !retryOmissions.has(message.id));
 	const sideContextBlocked = sideQuestions.length > 0 && !fitsSideContext(prospective);
 	if (sideContextBlocked && isSubscriptionProvider(conversation.provider) && input.type === "steers") {
@@ -491,7 +429,6 @@ export async function handleChatInput(
 	});
 	let pendingSideBudgetError: Error | undefined;
 	const agentOpts: AgentBuildOptions = {
-		pluginContributions,
 		engine,
 		callPurpose,
 		requestCycle,

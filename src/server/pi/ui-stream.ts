@@ -1,7 +1,6 @@
-import type { Agent, AgentEvent, AgentMessage } from "@earendil-works/pi-agent-core";
-import { ToolCallIdUniquifier } from "./call-ids.ts";
+import type { Agent,AgentEvent,AgentMessage } from "@earendil-works/pi-agent-core";
 import type { ChatGPTRequestCycle } from "../../agent/chatgpt-request-cycle.ts";
-import { pluginQuestionLedgerFor } from "../../agent/plugin-question-tools.ts";
+import { ToolCallIdUniquifier } from "./call-ids.ts";
 
 
 export type TurnWireEvent =
@@ -34,7 +33,6 @@ export interface PiTurnHandle {
 export function runPiTurn(spec: PiTurnSpec): PiTurnHandle {
 	const { agent, onError, onFinish, onSettleError, onSettleFailure, usedToolCallIds, updateFlushMs = 100, requestCycle } = spec;
 	const uniquifier = usedToolCallIds ? new ToolCallIdUniquifier(usedToolCallIds) : undefined;
-	const questions = pluginQuestionLedgerFor(agent);
 
 	let settled = false;
 	let sawAbort = false;
@@ -102,7 +100,7 @@ export function runPiTurn(spec: PiTurnSpec): PiTurnHandle {
 		try {
 			const settled_ = [...agent.state.messages].filter((m) => (m as { role?: string }).role !== "system");
 			const mapped = (uniquifier?.remapSettled(settled_) as AgentMessage[]) ?? settled_;
-			onFinish(questions?.settled(settled_, mapped) ?? mapped, sawAbort);
+			onFinish(mapped, sawAbort);
 		} catch (err) {
 			console.error("[turn] settlement failed:", err);
 			try { onSettleFailure?.(err, reportedErrorText); }
@@ -117,7 +115,7 @@ export function runPiTurn(spec: PiTurnSpec): PiTurnHandle {
 	const handle = (event: AgentEvent) => {
 		if (settled) return;
 		const mapped = uniquifier ? uniquifier.event(event) : event;
-		const uniqued = questions ? questions.wire(event, mapped) : mapped;
+		const uniqued = mapped;
 		if (uniqued) {
 			const wire: TurnWireEvent = uniqued.type === "message_update"
 				? { type: "message_update", message: uniqued.message } : uniqued;

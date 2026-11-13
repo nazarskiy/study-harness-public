@@ -4,130 +4,86 @@ import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
 import { AttachFilesButton } from "@/components/attach-files-button";
 
-import { createContext, Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useChatSession } from "@/components/session";
-import { usePlugins } from "./plugins";
-import { PluginSubmissionRunner, SubmissionModelEpoch, type SubmissionAttempt } from "./plugin-submission-runner";
-import { submissionImages, type BuiltinSubmissionCapture, type PrepareBuiltinSubmission, type PrepareThinkingSubmission, type PreparePluginQuestionSubmission, type PreparePluginProblemSubmission } from "./plugin-submission-adapters";
-import { SubmittedImages } from "./submitted-images";
-import { usePageSurfaceBoundary, SurfaceRegion } from "./plugin-surfaces";
-import { findSurfaceBoundary } from "./plugin-surface-targets";
-import { scheduleOpeningSubmission } from "./plugin-submission-opening";
-import { activeProblemOccurrenceOf, buildAnswer, toClientQuestion, type PluginSubmission, type PluginSubmissionTarget, type QuestionData } from "@/src/core";
-import { validatePluginBuiltinSubmissionAnswer } from "@/src/core";
-import { visibleQueuedSteers } from "@/components/session-core";
-import { SetupDialog } from "@/components/setup-dialog";
-import { Hint } from "@/components/ui/hint";
-import { cn } from "@/lib/utils";
-import { useModelSetup, selectedModelUnavailable, openModelPicker, ZeroKeysPill } from "@/components/setup-cta";
-import { useStickToBottomContext, type StickToBottomContext } from "use-stick-to-bottom";
+import { AbortTurnDialog,type AbortMode } from "@/components/abort-turn-dialog";
 import {
-	Conversation,
-	ConversationContent,
-	ConversationEmptyState,
-	ConversationScrollButton,
+Conversation,
+ConversationContent,
+ConversationEmptyState,
+ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
-import { PathText } from "@/components/file-path-chip";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
+import { Message,MessageContent,MessageResponse } from "@/components/ai-elements/message";
+import { Reasoning,ReasoningContent,ReasoningTrigger } from "@/components/ai-elements/reasoning";
 import { Shimmer } from "@/components/ai-elements/shimmer";
-import { OwlBusy } from "@/components/owl/owl-busy";
-import { Owl, type OwlMood } from "@/components/owl/owl";
-import { ToolPartRenderer } from "@/components/plugin-renderers";
-import { Separator } from "@/components/ui/separator";
 import { AnsweredCard } from "@/components/answered-card";
-import { MalformedQuestion } from "@/components/malformed-question";
 import { SubagentSteerCard } from "@/components/artifacts/steer-card";
-import { ChatSessionComposer } from "@/components/composer";
-import { useEnterSubmits } from "@/components/enter-submits";
-import { blurAfterPointerClick } from "@/components/focus-hygiene";
-import { dockStateKey } from "@/components/dock-state-key";
-import { clearOpeningPrompt, readOpeningPromptEntry, stashOpeningPrompt, OPENING_PROMPT_FAILURE } from "@/components/opening-prompt";
-import { forwardDockWheel, useDockHeight } from "@/components/dock-height";
-import { createDockMorph } from "@/components/dock-morph";
-import { QueuedSteersBody, type QueuedSteerLine } from "@/components/queued-steers";
-import { DictationBar, finishDictation, joinDictation, useDictation, type Dictation } from "@/components/dictation";
-import { useFieldCycle } from "@/components/field-cycle";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { JobsContext } from "@/components/jobs-context";
-import { StatsBar } from "@/components/stats-bar";
-import { useServerEvent, useServerResync } from "@/components/server-events";
-import {
-	isProviderKeyRefusal,
-	firstSourceTextParts,
-	cliContextWindowOf,
-	messageAnchorId,
-	sideEntryPoints,
-	sideSegmentId,
-	textPartMessageId,
-	kbdEventForAction as kbdEventForChat,
-	type ChatInput,
-	type ChatSettings,
-	type OwllyMessage,
-	type ModelSlotName,
-} from "@/src/core";
-import { PlanBlock, PlanPopup, latestTree } from "@/components/plan-block";
-import { PlanMarginalia, planExists } from "@/components/plan-window";
-import { MermaidOverlay, SessionMermaidContext, type SessionImage } from "@/components/session-overlay";
-import { AbortTurnDialog, type AbortMode } from "@/components/abort-turn-dialog";
-import { ArrowRightIcon, DumbbellIcon, MessageCircleQuestionIcon, WaypointsIcon } from "@/components/ui/icons";
-import type { PlanBlockData } from "@/src/core";
-import { QuestionDock } from "@/components/question-dock";
-import { PluginQuestionDock } from "./plugin-question-dock";
-import { PluginQuestionPart } from "./plugin-question-part";
-import { pluginQuestionKeySuppressed, composingQuestionKey } from "./plugin-question-keys";
-import { capturePluginQuestionDismissal, confirmPluginQuestionDismissal, type PluginQuestionDismissalTarget } from "./plugin-question-dismissal";
-import { pendingPluginQuestionOf, pluginQuestionCallsOf } from "@/src/core";
-import { pluginQuestionOccurrenceKey, type PluginQuestionSnapshot } from "@/src/core";
-import type { PluginQuestionDraft } from "./session-core";
-import { SessionFind } from "@/components/session-find";
-import { SessionMessageNavigation } from "@/components/session-navigation";
-import { SelectionToolbar } from "@/components/selection-toolbar";
-import { createCiteAction, type CitationEditTarget } from "@/components/citation-actions";
-import { CitationActionsContext, type CitationActions } from "@/components/citation-chip";
+import { createCiteAction,type CitationEditTarget } from "@/components/citation-actions";
+import { CitationActionsContext,type CitationActions } from "@/components/citation-chip";
 import { CitationCommentPopover } from "@/components/citation-comment-popover";
 import { revealCitationSource } from "@/components/citation-source";
-import { createSideQuestionActions, SideThreadBody, SideThreadPanel, SideThreadPopover } from "@/components/side-thread";
-import { useSideThread, type SideThreadOpenArgs } from "@/components/use-side-thread";
-import { useRouter } from "next/navigation";
-import { PracticeDock } from "@/components/practice-dock";
-import { PluginProblemDock, type PluginProblemDockProps } from "./plugin-problem-dock";
-import { practiceProblemForCall } from "@/src/core";
-import { PluginProblemSubmitted } from "./plugin-problem-submitted";
-import { readPluginProblemSubmission, pluginProblemById } from "@/src/core";
-import { ThinkingCard, ProblemCard, type PracticeThinkingData } from "@/components/practice-cards";
-import { GraphContextCard, type GraphContextData } from "@/components/graph-context-card";
-import { TopBar } from "@/components/top-bar";
-import { PluginSessionTopBarActions } from "@/components/plugin-chrome";
-import { usePluginShortcutPage } from "@/components/plugin-shortcuts";
-import { createPluginSessionActionContext, type PluginSessionViewInput } from "@/src/core";
-import type { SessionInputViewReader, SessionViewTargets, NativeQuestionViewState, ViewReaderRef } from "./session-view-readers";
-import type { JobRecord, Phase3, QuestionAnswerData, QuestionFormDraft, TurnUsage, SessionPricing } from "@/src/core";
-import type { OwllyViewMessage } from "@/src/core";
-import { PhaseChip, PhaseDivider } from "@/components/phase-divider";
 import {
-	CompactionCutDivider,
-	CompactionMomentDivider,
-	type CompactionDividerData,
+CompactionCutDivider,
+CompactionMomentDivider,
+type CompactionDividerData,
 } from "@/components/compaction-divider";
+import { ChatSessionComposer } from "@/components/composer";
+import { forwardDockWheel,useDockHeight } from "@/components/dock-height";
+import { createDockMorph } from "@/components/dock-morph";
+import { dockStateKey } from "@/components/dock-state-key";
+import { useEnterSubmits } from "@/components/enter-submits";
 import { CoverageRing } from "@/components/extraction-coverage";
+import { useFieldCycle } from "@/components/field-cycle";
+import { PathText } from "@/components/file-path-chip";
+import { blurAfterPointerClick } from "@/components/focus-hygiene";
+import { GraphContextCard,type GraphContextData } from "@/components/graph-context-card";
+import { JobsContext } from "@/components/jobs-context";
+import { MalformedQuestion } from "@/components/malformed-question";
+import { clearOpeningPrompt,OPENING_PROMPT_FAILURE,readOpeningPromptEntry,stashOpeningPrompt } from "@/components/opening-prompt";
+import { Owl,type OwlMood } from "@/components/owl/owl";
+import { OwlBusy } from "@/components/owl/owl-busy";
+import { PhaseChip,PhaseDivider } from "@/components/phase-divider";
+import { latestTree,PlanBlock,PlanPopup } from "@/components/plan-block";
+import { planExists,PlanMarginalia } from "@/components/plan-window";
+import { ProblemCard,ThinkingCard,type PracticeThinkingData } from "@/components/practice-cards";
+import { PracticeDock } from "@/components/practice-dock";
+import { QuestionDock } from "@/components/question-dock";
+import { QueuedSteersBody,type QueuedSteerLine } from "@/components/queued-steers";
+import { SelectionToolbar } from "@/components/selection-toolbar";
+import { useServerEvent,useServerResync } from "@/components/server-events";
+import { useChatSession } from "@/components/session";
+import { visibleQueuedSteers } from "@/components/session-core";
+import { SessionFind } from "@/components/session-find";
+import { SessionMessageNavigation } from "@/components/session-navigation";
+import { MermaidOverlay,SessionMermaidContext,type SessionImage } from "@/components/session-overlay";
+import { openModelPicker,selectedModelUnavailable,useModelSetup,ZeroKeysPill } from "@/components/setup-cta";
+import { SetupDialog } from "@/components/setup-dialog";
+import { createSideQuestionActions,SideThreadBody,SideThreadPanel,SideThreadPopover } from "@/components/side-thread";
+import { StatsBar } from "@/components/stats-bar";
+import { currentUserThinkingOpen,setAllUserThinkingOpen } from "@/components/thinking-block";
+import { ToolPartRenderer } from "@/components/tool-renderers";
+import { TopBar } from "@/components/top-bar";
 import { Button } from "@/components/ui/button";
+import { Hint } from "@/components/ui/hint";
+import { ArrowRightIcon,DumbbellIcon,MessageCircleQuestionIcon,WaypointsIcon } from "@/components/ui/icons";
+import { Separator } from "@/components/ui/separator";
+import { useSideThread } from "@/components/use-side-thread";
+import type { JobRecord,OwllyViewMessage,Phase3,PlanBlockData,QuestionAnswerData,QuestionFormDraft,SessionPricing,TurnUsage } from "@/src/core";
 import {
-	activeProblemOf,
-	pendingQuestionOf,
-	malformedQuestionsOf,
-	dismissedAnswer,
-	endsInFailedTurn,
-	findPendingToolCall,
-	phaseAt3,
-	phaseTimeline,
-	teachStepIndex,
-	toolQuestionKind,
-	questionNeedsReveal,
+activeProblemOccurrenceOf,activeProblemOf,buildAnswer,cliContextWindowOf,dismissedAnswer,
+endsInFailedTurn,
+findPendingToolCall,firstSourceTextParts,isProviderKeyRefusal,kbdEventForAction as kbdEventForChat,malformedQuestionsOf,messageAnchorId,pendingQuestionOf,phaseAt3,
+phaseTimeline,practiceProblemForCall,questionNeedsReveal,sideEntryPoints,
+teachStepIndex,textPartMessageId,toolQuestionKind,type ChatInput,type ModelSlotName,type OwllyMessage,type QuestionData
 } from "@/src/core";
-import { currentUserThinkingOpen, setAllUserThinkingOpen } from "@/components/thinking-block";
+import { usePathname,useRouter } from "next/navigation";
+import { createContext,Fragment,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState } from "react";
+import { useStickToBottomContext,type StickToBottomContext } from "use-stick-to-bottom";
+import { composingQuestionKey } from "./input-keys";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useOptionalInteractionLayers } from "./interaction-layers";
+import { scheduleOpeningSubmission } from "./opening-submission";
+import type { BuiltinSubmissionCapture,PrepareBuiltinSubmission,PrepareThinkingSubmission } from "./submission-adapters";
+import { SubmissionModelEpoch,SubmissionRunner,type SubmissionAttempt } from "./submission-runner";
+import { SubmittedImages } from "./submitted-images";
 
 const COLUMN = "mx-auto w-full max-w-none px-6";
 const DOCK = "mx-auto w-full max-w-[46rem] px-4";
@@ -237,47 +193,39 @@ export function Chat({
 }) {
 	const reattachSettledRef = useRef<() => void>(() => {});
 
-	const { canonicalMessages, reconciliation, reconcile, pluginQuestionAvailability, pluginQuestionDraft, pluginProblemAvailability, pluginProblemDraft, dismissPluginQuestion, readRecord, messages, nativeMessages, hasConfirmedConversation, contextTokens, send, continueIfOwed, steer, steerQueue, submitAnswer, dismissQuestion, dismissProblem, questionDraft, saveQuestionDraft, status, evaluating, error, stop, clearError, resumeStream, setReattachSettled } =
+	const { reconciliation, reconcile, readRecord, messages, nativeMessages, hasConfirmedConversation, contextTokens, send, continueIfOwed, steer, steerQueue, submitAnswer, dismissQuestion, dismissProblem, questionDraft, saveQuestionDraft, status, evaluating, error, stop, clearError, resumeStream, setReattachSettled } =
 		useChatSession({ chatId, initialMessages, initialError, initiallyInFlight });
 
 	const controller = useOptionalInteractionLayers();
 	const sessionFindScopeRef = useRef<HTMLDivElement | null>(null);
 	const pathname = usePathname();
-	const surfaceTarget = usePageSurfaceBoundary({ active: pathname === `/chat/${encodeURIComponent(chatId)}`, viewKey: chatId, bodyRef: sessionFindScopeRef });
-	const { manager: pluginManager } = usePlugins();
 	const [, submissionChanged] = useState(0);
 	const [preparationError, setPreparationError] = useState<string>();
-	const [submissionRunner] = useState(() => new PluginSubmissionRunner(() => submissionChanged(n => n + 1)));
+	const [submissionRunner] = useState(() => new SubmissionRunner(() => submissionChanged(n => n + 1)));
 	const [submissionModel] = useState(() => new SubmissionModelEpoch());
 	const submissionMounted = useRef(true);
 	useEffect(() => { submissionMounted.current = true; return () => { submissionMounted.current = false; submissionRunner.dispose(); }; }, [submissionRunner]);
-	useEffect(() => () => submissionRunner.dispose(), [surfaceTarget, submissionRunner]);
-	const [inputViewReader] = useState<SessionInputViewReader>(() => ({ current: null }));
-	const refreshPluginActions = useRef<(() => void) | null>(null);
-	const notifyViewChanged = useCallback(() => { if (submissionMounted.current) refreshPluginActions.current?.(); }, []);
-	inputViewReader.changed = notifyViewChanged;
-	const submissionLive = useRef({ nativeMessages, surfaceTarget, ready: true });
-	submissionLive.current = { nativeMessages, surfaceTarget, ready: true };
+	const submissionLive = useRef({ nativeMessages, pathname, ready: true });
+	submissionLive.current = { nativeMessages, pathname, ready: true };
 	const attachments = useAttachmentUploads();
-	const runSubmission = async (target: PluginSubmissionTarget, capture: () => PluginSubmission | Promise<PluginSubmission>, current: () => boolean, deliver: (prepared: PluginSubmission, attempt: SubmissionAttempt) => Promise<boolean>): Promise<boolean> => {
+	const runSubmission = async <T,>(capture: () => T | Promise<T>, current: () => boolean, deliver: (prepared: T, attempt: SubmissionAttempt) => Promise<boolean>): Promise<boolean> => {
 		if (attachments.isUploading()) return false;
 		const modelRevision = submissionModel.capture();
-		const attempt = submissionRunner.begin(target, pluginManager?.captureSubmissionInterceptors() ?? [], () => !attachments.isUploading() && submissionMounted.current && submissionModel.isCurrent(modelRevision) && submissionLive.current.surfaceTarget === target.surfaceTarget && !!findSurfaceBoundary(target.surfaceTarget) && current());
+		const attempt = submissionRunner.begin(() => !attachments.isUploading() && submissionMounted.current && submissionModel.isCurrent(modelRevision) && submissionLive.current.pathname === pathname && current());
 		if (!attempt) return false;
 		setPreparationError(undefined);
 		try {
-			const input = await attempt.finalize(async () => { await finishDictation(); return capture(); });
-			const prepared = await attempt.prepare(input, submissionLive.current.nativeMessages);
-			if (!prepared) return false;
+			const prepared = await attempt.finalize(capture);
 			attempt.check();
-			return await deliver(prepared, attempt);
+			const accepted = await deliver(prepared, attempt);
+			if (!accepted) attempt.refused();
+			return accepted;
 		} catch (error) {
 			attempt.cancel(); attempt.refused();
 			if (!(error instanceof DOMException && error.name === "AbortError")) setPreparationError(attempt.preparationFailure(error).message);
 			return false;
 		}
 	};
-	const textTarget = (): Extract<PluginSubmissionTarget, { type: "text" }> | undefined => surfaceTarget ? { type: "text", sessionId: chatId, sessionKind: kind === "practice" ? "practice" : "teaching", surfaceTarget, channels: ["content"] } : undefined;
 	const scrollContextRef = useRef<StickToBottomContext | null>(null);
 	const sourceTextParts = useMemo(() => firstSourceTextParts(messages), [messages]);
 	const sideEntries = useMemo(() => sideEntryPoints(nativeMessages, messages), [nativeMessages, messages]);
@@ -355,26 +303,22 @@ export function Chat({
 	const [abortAsk, setAbortAsk] = useState<AbortMode | null>(null);
 	const abortAskRef = useRef<AbortMode | null>(null);
 	abortAskRef.current = abortAsk;
-	const pluginAbortTarget = useRef<PluginQuestionDismissalTarget | null>(null);
-	const pluginDismissal = useRef({ canonicalMessages, reconciliation, stop, dismissPluginQuestion });
-	pluginDismissal.current = { canonicalMessages, reconciliation, stop, dismissPluginQuestion };
-	const closeAbortAsk = useCallback(() => { pluginAbortTarget.current = null; setAbortAsk(null); }, []);
+	const closeAbortAsk = useCallback(() => setAbortAsk(null), []);
 	useEffect(() => {
 		const onAbort = () => {
 			if (!isInteractionScopeEligible(sessionFindScopeRef.current, controller)) return;
-			const pluginQuestion = capturePluginQuestionDismissal(pluginDismissal.current.canonicalMessages);
 			const target = escAbortTarget({
 				abortAsk: abortAskRef.current !== null,
 				sideThread: sideThreadOpenRef.current,
 				mermaidFocus: mermaidFocusRef.current !== null || figureFocusRef.current !== null,
 				planOpen: planOpenRef.current,
 				setupOpen: setupOpenRef.current,
-				pending: pendingRef.current !== null || pluginQuestion !== null,
+				pending: pendingRef.current !== null,
 				problem: activeProblemRef.current !== null,
 				busy: busyRef.current,
 			});
 			if (target === "side-thread") closeSideThreadRef.current();
-			else if (target === "question") { pluginAbortTarget.current = pluginQuestion; setAbortAsk("question"); }
+			else if (target === "question") setAbortAsk("question");
 			else if (target === "problem") setAbortAsk("problem");
 			else if (target === "turn") setAbortAsk("turn");
 			else if (target === "mermaid") setMermaidFocus(null);
@@ -385,12 +329,7 @@ export function Chat({
 	}, [controller]);
 	const confirmAbort = useCallback(
 		(mode: AbortMode) => {
-			const pluginQuestion = pluginAbortTarget.current;
 			closeAbortAsk();
-			if (mode === "question" && pluginQuestion) {
-				confirmPluginQuestionDismissal(pluginQuestion, pluginDismissal.current);
-				return;
-			}
 			if (mode === "turn") {
 				abortInFlightTurn();
 				return;
@@ -425,18 +364,6 @@ export function Chat({
 		if (!turnInFlight) continueIfOwed(initialMessages);
 	}, []);
 
-	const pendingPlugin = pendingPluginQuestionOf(canonicalMessages);
-	const unreadablePlugin = pluginQuestionCallsOf(canonicalMessages).find(call => call.status === "unreadable");
-	const pluginOwnsDock = !!pendingPlugin || !!unreadablePlugin;
-	const [pluginMicAvailable, setPluginMicAvailable] = useState(false);
-	const pluginProblemIdentity = activeProblemOf(canonicalMessages)?.pluginProblem?.problemId;
-	const pluginCanonicalIdentity = pendingPlugin?.questionId ?? (unreadablePlugin ? pluginQuestionOccurrenceKey(unreadablePlugin.occurrence) : pluginProblemIdentity ?? null);
-	useEffect(() => {
-		if (pluginCanonicalIdentity) void reconcile();
-	}, [pluginCanonicalIdentity, reconcile]);
-	useServerEvent("plugins-changed", () => {
-		if ((pluginOwnsDock || pluginProblemIdentity) && status !== "submitted" && status !== "streaming") void reconcile();
-	});
 	const pending = findPendingToolCall(messages, pendingQuestionOf(nativeMessages));
 	const malformedQuestions = malformedQuestionsOf(nativeMessages);
 	const pendingRef = useRef(pending);
@@ -471,7 +398,7 @@ export function Chat({
 		[send],
 	);
 
-	const requiresReveal = pendingPlugin ? pendingPlugin.variant === "teach" && pendingPlugin.input.type === "check" : pending !== null && questionNeedsReveal(pending.tool, pending.input, phaseAt3(messages));
+	const requiresReveal = pending !== null && questionNeedsReveal(pending.tool, pending.input, phaseAt3(messages));
 
 	const readingThinkingRef = useRef("");
 
@@ -511,113 +438,41 @@ export function Chat({
 		return () => { openingMountedRef.current = false; };
 	}, []);
 
-	const builtinTarget = (question: QuestionData): Extract<PluginSubmissionTarget, { type: "answer" }> | undefined => {
-		if (!surfaceTarget || !pending) return;
-		return { type: "answer", sessionId: chatId, sessionKind: kind === "practice" ? "practice" : "teaching", surfaceTarget,
-			channels: ["answer", "thinking", ...(requiresReveal ? ["readingThinking" as const] : [])],
-			question: { ...toClientQuestion(question), occurrence: { messageId: pending.messageId, contentIndex: pending.contentIndex, toolCallId: pending.toolCallId, toolName: pending.tool }, ...(question.questionType ? { questionType: question.questionType } : {}) },
-		};
-	};
 	const prepareBuiltin: PrepareBuiltinSubmission = ({ question, capture, isCurrent }: BuiltinSubmissionCapture) => {
-		const target = builtinTarget(question), original = pending;
-		if (!target || !original || busyRef.current || compacting) return;
-		void runSubmission(target, () => {
-			const raw = capture();
-			saveQuestionDraft(original.key, { readingThinking: readingThinkingRef.current });
-			return { type: "answer", answer: {
-				...(raw.dontKnow !== undefined ? { dontKnow: raw.dontKnow } : {}), ...(raw.values !== undefined ? { values: raw.values } : {}),
-				...(raw.other !== undefined ? { other: raw.other } : {}), ...(raw.text !== undefined ? { text: raw.text } : {}),
-				images: [],
-			}, thinking: { text: raw.thinking ?? "", images: [] }, readingThinking: { text: requiresReveal ? readingThinkingRef.current : "", images: [] } };
-		}, () => {
+		const original = pending;
+		if (!original || busyRef.current || compacting) return;
+		void runSubmission(capture, () => {
 			const now = pendingQuestionOf(submissionLive.current.nativeMessages);
 			return isCurrent() && !busyRef.current && now?.messageId === original.messageId && now.contentIndex === original.contentIndex && now.toolCallId === original.toolCallId && now.tool === original.tool;
-		}, async (prepared, attempt) => {
-			if (prepared.type !== "answer") return false;
-			const raw = validatePluginBuiltinSubmissionAnswer(question, prepared.answer);
-			const answer = buildAnswer(question, { ...raw, ...(prepared.thinking.text ? { thinking: prepared.thinking.text } : {}), ...(requiresReveal && prepared.readingThinking.text ? { readingThinking: prepared.readingThinking.text } : {}) }, original.tool);
-			const images = submissionImages(prepared, target.channels);
-			capture(); saveQuestionDraft(original.key, { readingThinking: readingThinkingRef.current });
+		}, async (raw, attempt) => {
+			const answer = buildAnswer(question, raw, original.tool);
+			saveQuestionDraft(original.key, { readingThinking: readingThinkingRef.current });
 			attempt.deliver();
-			return send({ type: "answer", toolCallId: original.toolCallId, occurrence: target.question.occurrence, answer: { ...answer, ...(images ? { images } : {}) } }, attempt.accepted, original.key, attempt.refused);
+			return send({ type: "answer", toolCallId: original.toolCallId, occurrence: { messageId: original.messageId, contentIndex: original.contentIndex, toolCallId: original.toolCallId, toolName: original.tool }, answer }, attempt.accepted, original.key, attempt.refused);
 		});
-	};
-	const thinkingTarget = (): Extract<PluginSubmissionTarget, { type: "thinking" }> | undefined => {
-		const occurrence = activeProblemOccurrenceOf(nativeMessages);
-		if (!surfaceTarget || !activeProblem || activeProblem.pluginProblem || !occurrence) return;
-		return { type: "thinking", sessionId: chatId, sessionKind: kind === "practice" ? "practice" : "teaching", surfaceTarget, channels: ["content"], problem: { occurrence, statement: (activeProblem.input as { statement: string }).statement } };
 	};
 	const prepareThinking: PrepareThinkingSubmission = (capture, clear) => {
-		const target = thinkingTarget();
-		if (!target || busyRef.current || compacting) return;
-		let captured = "";
-		void runSubmission(target, () => ({ type: "thinking", content: { text: captured = capture(), images: [] } }), () => !busyRef.current && JSON.stringify(activeProblemOccurrenceOf(submissionLive.current.nativeMessages)) === JSON.stringify(target.problem.occurrence), async (prepared, attempt) => {
-			if (prepared.type !== "thinking") return false;
-			if (!prepared.content.text.trim() && !prepared.content.images.length) throw new Error("Thinking text or images are required. Your input has been kept.");
+		const occurrence = activeProblemOccurrenceOf(nativeMessages);
+		if (!occurrence || !activeProblem || busyRef.current || compacting) return;
+		void runSubmission(capture, () => !busyRef.current && JSON.stringify(activeProblemOccurrenceOf(submissionLive.current.nativeMessages)) === JSON.stringify(occurrence), async (text, attempt) => {
+			if (!text.trim()) { attempt.cancel(); return false; }
 			attempt.deliver();
-			return send({ type: "thinking", problemCallId: target.problem.occurrence.toolCallId, occurrence: target.problem.occurrence, text: prepared.content.text, ...(prepared.content.images.length ? { images: prepared.content.images.map(image => ({ ...image })) } : {}) }, () => { clear(captured); attempt.accepted(); }, undefined, attempt.refused);
-		});
-	};
-	const pluginProblemTarget = (): Extract<PluginSubmissionTarget, { type: "plugin-problem-submission" }> | undefined => {
-		const original = activeProblem?.pluginProblem, occurrence = activeProblemOccurrence;
-		if (!surfaceTarget || !original || !occurrence) return;
-		return { type: "plugin-problem-submission", sessionId: chatId, sessionKind: "practice", surfaceTarget,
-			channels: ["submission", "thinking"], problem: { problemId: original.problemId, occurrence, pluginId: original.pluginId, typeId: original.typeId, contractVersion: original.contractVersion, label: original.label, statement: original.input.statement } };
-	};
-	const preparePluginProblem: PreparePluginProblemSubmission = (capture, isCurrent, onAccepted) => {
-		const original = activeProblem?.pluginProblem, occurrence = activeProblemOccurrence, target = pluginProblemTarget();
-		if (!target || !original || !occurrence || busyRef.current || compacting) return Promise.resolve(false);
-		return runSubmission(target, () => {
-			const raw = capture();
-			return { type: "plugin-problem-submission", submission: raw.submission, submissionImages: [], thinking: { text: raw.thinking ?? "", images: [] } };
-		}, () => isCurrent() && !busyRef.current && activeProblemOf(submissionLive.current.nativeMessages)?.pluginProblem?.problemId === original.problemId, async (prepared, attempt) => {
-			if (prepared.type !== "plugin-problem-submission") return false;
-			const images = { ...(prepared.submissionImages.length ? { submission: prepared.submissionImages } : {}), ...(prepared.thinking.images.length ? { thinking: prepared.thinking.images } : {}) };
-			attempt.deliver();
-			return send({ type: "plugin-problem-submission", problemId: original.problemId, occurrence, submission: prepared.submission as Extract<ChatInput, { type: "plugin-problem-submission" }>["submission"],
-				thinking: prepared.thinking.text, ...(Object.keys(images).length ? { images } : {}),
-			}, () => { onAccepted(); attempt.accepted(); }, undefined, attempt.refused);
-		});
-	};
-	const pluginQuestionTarget = (): Extract<PluginSubmissionTarget, { type: "plugin-question-answer" }> | undefined => {
-		if (!surfaceTarget || !pendingPlugin) return;
-		const original = pendingPlugin;
-		return { type: "plugin-question-answer", sessionId: chatId, sessionKind: kind === "practice" ? "practice" : "teaching", surfaceTarget,
-			channels: ["answer", ...(original.showThinking ? ["thinking" as const] : []), ...(requiresReveal ? ["readingThinking" as const] : [])],
-			question: { questionId: original.questionId, occurrence: original.occurrence, pluginId: original.pluginId, typeId: original.typeId, contractVersion: original.contractVersion, label: original.label, variant: original.variant, showThinking: original.showThinking },
-		};
-	};
-	const preparePluginQuestion: PreparePluginQuestionSubmission = (capture, isCurrent) => {
-		const target = pluginQuestionTarget();
-		if (!target || !pendingPlugin || busyRef.current || compacting) return Promise.resolve(false);
-		const original = pendingPlugin;
-		return runSubmission(target, () => {
-			const raw = capture();
-			return { type: "plugin-question-answer", answer: raw.answer, answerImages: [], thinking: { text: raw.thinking ?? "", images: [] }, readingThinking: { text: raw.readingThinking ?? "", images: [] } };
-		}, () => isCurrent() && !busyRef.current && pendingPluginQuestionOf(submissionLive.current.nativeMessages)?.questionId === original.questionId, async (prepared, attempt) => {
-			if (prepared.type !== "plugin-question-answer") return false;
-			const images = submissionImages(prepared, target.channels);
-			attempt.deliver();
-			return send({ type: "plugin-question-answer", questionId: original.questionId, occurrence: original.occurrence, answer: prepared.answer as Extract<ChatInput, { type: "plugin-question-answer" }>["answer"],
-				...(original.showThinking && prepared.thinking.text ? { thinking: prepared.thinking.text } : {}), ...(requiresReveal && prepared.readingThinking.text ? { readingThinking: prepared.readingThinking.text } : {}), ...(images ? { images } : {}),
-			}, attempt.accepted, undefined, attempt.refused);
+			return send({ type: "thinking", problemCallId: occurrence.toolCallId, occurrence, text }, () => { clear(text); attempt.accepted(); }, undefined, attempt.refused);
 		});
 	};
 	const prepareText = (supplied?: string, openingAccepted?: () => void, beforePost?: (captured: string) => boolean) => {
-		const target = textTarget();
-		if (!target || pendingRef.current || pluginOwnsDock || activeProblemRef.current || compacting) return Promise.resolve(false);
+		if (pendingRef.current || activeProblemRef.current || compacting) return Promise.resolve(false);
 		if (!busyRef.current && zeroKeys) { setSetupOpen(true); return Promise.resolve(false); }
 		if (!busyRef.current && selectedModelUnavailable(catalog, selectedModel)) { openModelPicker(); return Promise.resolve(false); }
-		let captured = "", capturedRevision = 0;
-		return runSubmission(target, () => { capturedRevision = composerEditRevision.current; return { type: "text", content: { text: captured = supplied ?? textRef.current.trim(), images: [] } }; }, () => submissionLive.current.ready && !pendingQuestionOf(submissionLive.current.nativeMessages) && !pendingPluginQuestionOf(submissionLive.current.nativeMessages) && !activeProblemOf(submissionLive.current.nativeMessages), async (prepared, attempt) => {
-			if (prepared.type !== "text") return false;
-			if (!prepared.content.text.trim() && !prepared.content.images.length) throw new Error("Message text or images are required. Your input has been kept.");
-			if (beforePost && !beforePost(captured)) { attempt.cancel(); return false; }
-			draftRef.current = captured;
-			const accepted = () => { if (composerEditRevision.current === capturedRevision && textRef.current.trim() === captured) applyText(""); openingAccepted?.(); attempt.accepted(); };
+		let capturedRevision = 0;
+		return runSubmission(() => { capturedRevision = composerEditRevision.current; return supplied ?? textRef.current.trim(); }, () => submissionLive.current.ready && !pendingQuestionOf(submissionLive.current.nativeMessages) && !activeProblemOf(submissionLive.current.nativeMessages), async (text, attempt) => {
+			if (!text.trim()) { attempt.cancel(); return false; }
+			if (beforePost && !beforePost(text)) { attempt.cancel(); return false; }
+			draftRef.current = text;
+			const accepted = () => { if (composerEditRevision.current === capturedRevision && textRef.current.trim() === text) applyText(""); openingAccepted?.(); attempt.accepted(); };
 			attempt.deliver();
-			if (busyRef.current) return steer(prepared.content.text, prepared.content.images, accepted, attempt.refused);
-			return send({ type: "text", text: prepared.content.text, ...(prepared.content.images.length ? { images: prepared.content.images.map(image => ({ ...image })) } : {}) }, accepted, undefined, attempt.refused);
+			if (busyRef.current) return steer(text, undefined, accepted, attempt.refused);
+			return send({ type: "text", text }, accepted, undefined, attempt.refused);
 		});
 	};
 
@@ -649,9 +504,9 @@ export function Chat({
 
 	const sentInitial = useRef(false);
 	useEffect(() => {
-		if (sentInitial.current || !surfaceTarget) return;
+		if (sentInitial.current || pathname !== `/chat/${encodeURIComponent(chatId)}`) return;
 		return scheduleOpeningSubmission(
-			() => !sentInitial.current && submissionMounted.current && submissionLive.current.surfaceTarget === surfaceTarget && !!findSurfaceBoundary(surfaceTarget),
+			() => !sentInitial.current && submissionMounted.current && submissionLive.current.pathname === pathname,
 			() => {
 				sentInitial.current = true;
 				const entry = readOpeningPromptEntry(chatId);
@@ -668,7 +523,7 @@ export function Chat({
 				deliverOpeningPrompt(prompt!);
 			},
 		);
-	}, [chatId, initialPrompt, initialMessages, initiallyInFlight, surfaceTarget, deliverOpeningPrompt, applyText]);
+	}, [chatId, initialPrompt, initialMessages, initiallyInFlight, pathname, deliverOpeningPrompt, applyText]);
 
 	useEffect(() => {
 		if (!hasConfirmedConversation) return;
@@ -711,19 +566,6 @@ export function Chat({
 		];
 	}, []);
 	useFieldCycle(cycleChatFields);
-	const choiceQuestion = !!pending && (toolQuestionKind(pending.tool) === "quiz" || (toolQuestionKind(pending.tool) === "ask" && !!(pending.input as { options?: unknown[] }).options?.length));
-	const dictationDisabled = !!pluginProblemIdentity || (pluginOwnsDock ? !pluginMicAvailable : choiceQuestion);
-	const recording = useDictation({
-		append: (t) => { if (!pluginOwnsDock) applyText(joinDictation(textRef.current, t)); },
-		disabled: dictationDisabled,
-	});
-	const dictation: Dictation = { ...recording,
-		phase: recording.destinationId === "main" ? recording.phase : "idle",
-		active: recording.destinationId === "main" && recording.active,
-		error: recording.destinationId === "main" ? recording.error : null,
-		blocked: recording.destinationId !== "main" && recording.active,
-	};
-	const dictationWasActiveRef = useRef(false);
 	const composerInputRef = useRef<HTMLDivElement>(null);
 
 	const [transcriptElement, setTranscriptElement] = useState<HTMLElement | null>(null);
@@ -747,40 +589,15 @@ export function Chat({
 	);
 	const workingRef = useRef("");
 	const sideThread = useSideThread(chatId, nativeMessages, () => {
-		if (pendingPlugin) return pendingPlugin.showThinking ? pluginQuestionDraft(pendingPlugin).thinking : "";
-		if (activeProblem?.pluginProblem) return pluginProblemDraft(activeProblem.pluginProblem).thinking;
 		return workingRef.current;
 	});
-	const sideNavigation = useRef(0);
 	const closeSideThread = useCallback(() => {
 		const id = sideThread.state?.threadId;
-		if (!id) return;
-		const navigation = ++sideNavigation.current;
-		void recording.finishFor(`side:${id}`).then(() => {
-			if (navigation === sideNavigation.current) sideThread.close(id);
-		});
-	}, [recording.finishFor, sideThread.state?.threadId, sideThread.close]);
-	const openSideThread = useCallback((args: SideThreadOpenArgs) => {
-		const navigation = ++sideNavigation.current;
-		const current = sideThread.state;
-		const source = args.sourceMessageId ?? args.passage?.sourceMessageId ?? (args.questionCallId ? nativeMessages.find((message) => message.role === "assistant" &&
-			message.content.some((block) => block.type === "toolCall" && block.id === args.questionCallId))?.id : undefined);
-		if (current && current.segmentId !== sideSegmentId(nativeMessages, source) && recording.active && recording.destinationId === `side:${current.threadId}`) {
-			void recording.finishFor(`side:${current.threadId}`).then(() => {
-				if (navigation === sideNavigation.current) sideThread.open(args);
-			});
-		} else sideThread.open(args);
-	}, [nativeMessages, recording.active, recording.destinationId, recording.finishFor, sideThread.open, sideThread.state]);
+		if (id) sideThread.close(id);
+	}, [sideThread.state?.threadId, sideThread.close]);
+	const openSideThread = sideThread.open;
 	const goToCurrentSideStep = sideThread.state && sideThread.currentSegmentId && sideThread.state.segmentId !== sideThread.currentSegmentId
 		? () => openSideThread({ sourceMessageId: sideThread.currentSegmentId!, anchor: sideThread.state!.anchor }) : undefined;
-	const sideDictationFor = (id: string) => {
-		const destinationId = `side:${id}`;
-		const owns = recording.destinationId === destinationId;
-		return { phase: owns ? recording.phase : "idle" as const, active: owns && recording.active,
-			blocked: !owns && recording.active, error: owns ? recording.error : null, levelRef: recording.levelRef,
-			toggle: () => recording.toggleFor({ id: destinationId, append: (text) => sideThread.saveDraft(id, joinDictation(sideThread.draftFor(id), text), true) }),
-			finish: () => recording.finishFor(destinationId) };
-	};
 	const renderSideEntry = (sourceMessageId?: string) => {
 		if (!sourceMessageId) return null;
 		const hasHistory = sideThread.threads.some((thread) => thread.anchor.messageId === sourceMessageId && thread.messages.length > 0);
@@ -825,29 +642,18 @@ export function Chat({
 			});
 		},
 	}), [chatId, router]);
-	useEffect(() => {
-		if (dictation.active) {
-			dictationWasActiveRef.current = true;
-		} else if (dictationWasActiveRef.current) {
-			dictationWasActiveRef.current = false;
-			if (!document.activeElement?.closest('[data-testid="side-thread"]') && isInteractionScopeEligible(composerInputRef.current, controller)) composerInputRef.current!.focus();
-		}
-	}, [dictation.active, controller]);
 
 	const [compacting, setCompacting] = useState(initiallyCompacting);
 	submissionLive.current.ready = !compacting && reconciliation === "ready";
-	const retryable = !pluginOwnsDock && (status === "ready" || status === "error") && !busy && !compacting && endsInFailedTurn(nativeMessages);
+	const retryable = (status === "ready" || status === "error") && !busy && !compacting && endsInFailedTurn(nativeMessages);
 	const retryFailedTurn = () => retryFailedResponse(send, draftRef);
-	const sendAllowed = !pluginOwnsDock && reconciliation === "ready" && !pending && !activeProblem && !compacting && !submissionRunner.occupied;
-	const pendingTextTarget = textTarget();
-	const pendingTextInput = !!pendingTextTarget && !!pluginManager?.hasPendingSubmissionInput(pendingTextTarget);
-	const pendingThinkingTarget = thinkingTarget();
-	const pendingThinkingInput = !!pendingThinkingTarget && !!pluginManager?.hasPendingSubmissionInput(pendingThinkingTarget);
+	const sendAllowed = reconciliation === "ready" && !pending && !activeProblem && !compacting && !submissionRunner.occupied;
+	const pendingTextInput = false;
+	const pendingThinkingInput = false;
 
 	const nextReady =
 		kind === "practice" &&
 		!pending &&
-		!pluginOwnsDock &&
 		!activeProblem &&
 		!compacting &&
 		!busy &&
@@ -1078,35 +884,6 @@ export function Chat({
 	};
 
 
-	const readViewInput = (): PluginSessionViewInput => {
-		const expected = pendingPlugin?.occurrence ?? unreadablePlugin?.occurrence
-			?? (pending ? { messageId: pending.messageId, contentIndex: pending.contentIndex, toolCallId: pending.toolCallId, toolName: pending.tool } : undefined) ?? activeProblemOccurrence;
-		if (!expected && !unreadablePlugin) return textTarget()!;
-		const current = inputViewReader.current?.();
-		const occurrence = current?.type === "answer" || current?.type === "plugin-question-answer" ? current.question.occurrence
-			: current?.type === "thinking" || current?.type === "plugin-problem-submission" ? current.problem.occurrence : current?.type === "unavailable" ? current.occurrence : undefined;
-		if (current && current.type !== "text" && expected && occurrence && pluginQuestionOccurrenceKey(expected) === pluginQuestionOccurrenceKey(occurrence)) return current;
-		return { type: "unavailable", ...(expected ? { occurrence: expected } : {}), expanded: false, revealed: false };
-	};
-	const actionContext = () => surfaceTarget ? createPluginSessionActionContext({ placement: "top-bar", surface: "session", sessionId: chatId, kind: kind === "practice" ? "practice" : "teaching", surfaceTarget }, () => {
-		if (!submissionMounted.current || submissionLive.current.surfaceTarget !== surfaceTarget) throw new Error("This session view is no longer active.");
-		return {
-			sessionId: chatId, kind: kind === "practice" ? "practice" : "teaching", title: titleText,
-			messages: nativeMessages, transcript: messages, status, reconciliation, busy, compacting,
-			phase: kind === "practice" ? "practice" : phases.at(-1) ?? "probe", contextTokens,
-			queuedSteers: visibleQueuedSteers(steerQueue, nativeMessages), composer: { text: textRef.current },
-			input: readViewInput(),
-		};
-	}) : undefined;
-	const captureActionContext = () => {
-		if (!submissionMounted.current || !surfaceTarget || !findSurfaceBoundary(surfaceTarget)) return;
-		const captured = actionContext();
-		if (captured) void captured.view;
-		return captured;
-	};
-
-	usePluginShortcutPage(`/chat/${encodeURIComponent(chatId)}`, captureActionContext);
-
 	return (
 		<ChatActionsContext.Provider
 			value={{
@@ -1154,7 +931,7 @@ export function Chat({
 								}}
 								onBlur={() => void commitRename(titleDraft)}
 								spellCheck={false}
-								data-plugin-chrome-title
+								data-conversation-title
 								aria-label="Session title"
 								title="Rename this session"
 								className="min-w-[8ch] max-w-[70%] shrink-0 bg-transparent font-title text-3xl tracking-tight caret-current outline-none [field-sizing:content]"
@@ -1176,7 +953,7 @@ export function Chat({
 								setTitleDraft(titleText);
 								setRenaming(true);
 							}}
-							data-plugin-chrome-title
+							data-conversation-title
 							className="-mx-1.5 min-w-4 shrink cursor-text truncate rounded-md px-1.5 text-left font-title text-3xl tracking-tight transition-colors hover:bg-accent"
 						>
 							{titleText}
@@ -1226,7 +1003,6 @@ export function Chat({
 					) : (
 						<PhaseChip phase={phases.at(-1) ?? "probe"} />
 					)}
-					<PluginSessionTopBarActions readContext={actionContext} captureContext={captureActionContext} refreshRef={refreshPluginActions} />
 				</TopBar>
 
 				<SessionFind scopeRef={sessionFindScopeRef} scrollContextRef={scrollContextRef} />
@@ -1258,10 +1034,6 @@ export function Chat({
 												return <CompactionMomentDivider key={pi} data={part.data as CompactionDividerData} />;
 											case "data-compaction-cut":
 												return <CompactionCutDivider key={pi} data={part.data as CompactionDividerData} />;
-											case "data-plugin-problem-submission": {
-												const submitted = readPluginProblemSubmission(part.data);
-												return <PluginProblemSubmitted key={pi} data={part.data} snapshot={submitted ? pluginProblemById(nativeMessages, submitted.problemId) : null} chatId={chatId} />;
-											}
 											case "data-practice-thinking":
 												return <ThinkingCard key={pi} data={part.data as PracticeThinkingData} />;
 											case "data-practice-next":
@@ -1309,7 +1081,6 @@ export function Chat({
 									<MessageContent className="w-full">
 											{m.parts.map((part, pi) => {
 												if (part.pluginProblem) return <ProblemCard key={pi} part={{ ...part, state: part.state ?? "input-available", toolCallId: part.toolCallId ?? "" }} />;
-												if (part.pluginQuestion) return <PluginQuestionPart key={pi} part={part} chatId={chatId} />;
 												const isLastPart = mi === messages.length - 1 && pi === m.parts.length - 1;
 												const teachBoundary =
 													m.role === "assistant" &&
@@ -1427,39 +1198,22 @@ export function Chat({
 				{
 }
 				<DockOverlay
-					viewReader={inputViewReader}
-					viewTargets={surfaceTarget ? { text: textTarget()!, answer: builtinTarget, thinking: thinkingTarget(), pluginQuestion: pluginQuestionTarget(), pluginProblem: pluginProblemTarget() } : undefined}
 					pending={pending}
 					onPrepareBuiltin={prepareBuiltin}
-					onBuiltinPendingInput={question => { const target = builtinTarget(question); return !!target && !!pluginManager?.hasPendingSubmissionInput(target); }}
+
+					onBuiltinPendingInput={() => false}
 					onPrepareThinking={prepareThinking}
 					pendingThinkingInput={pendingThinkingInput}
-					onPreparePluginQuestion={preparePluginQuestion}
 					preparing={submissionRunner.occupied}
 					preparationStatus={<>
 						{preparationError && <p role="alert" className="px-4 py-2 text-sm text-destructive">{preparationError}</p>}
 					</>}
-					pluginQuestion={pendingPlugin}
-					pluginDraft={pendingPlugin ? pluginQuestionDraft(pendingPlugin) : undefined}
-					pluginAvailable={!!pendingPlugin && pluginQuestionAvailability?.questionId === pendingPlugin.questionId && pluginQuestionAvailability.status === "available"}
-					pluginReady={!busy && !compacting && reconciliation === "ready"}
-					onPluginMicAvailable={setPluginMicAvailable}
-					onPluginSend={send}
-					onPluginDismiss={() => pendingPlugin ? dismissPluginQuestion(pendingPlugin.occurrence, pendingPlugin.questionId) : unreadablePlugin ? dismissPluginQuestion(unreadablePlugin.occurrence, unreadablePlugin.annotation.status === "unreadable" ? unreadablePlugin.annotation.identity?.questionId : undefined) : Promise.resolve()}
-					unreadablePlugin={!!unreadablePlugin}
-					unavailableOccurrence={unreadablePlugin?.occurrence}
 					reconciliation={reconciliation}
 					onRetrySync={() => { void reconcile(); }}
 					initialQuestionDraft={pending ? questionDraft(pending.key)?.form : undefined}
 					onSaveQuestionDraft={(form) => { if (pending) saveQuestionDraft(pending.key, { form }); }}
 					workingRef={workingRef}
 					practice={activeProblem}
-					pluginPractice={activeProblem?.pluginProblem && activeProblemOccurrence ? {
-						snapshot: activeProblem.pluginProblem, occurrence: activeProblemOccurrence, chatId, draft: pluginProblemDraft(activeProblem.pluginProblem),
-						available: pluginProblemAvailability?.problemId === activeProblem.pluginProblem.problemId && pluginProblemAvailability.status === "available",
-						ready: !busy && !compacting && reconciliation === "ready", reconciliation: activeProblemOf(canonicalMessages)?.pluginProblem?.problemId === activeProblem.pluginProblem.problemId ? reconciliation : "syncing",
-						prepareSubmission: preparePluginProblem, send, preparing: submissionRunner.occupied, compactionRunning: compacting, onEscape: dictation.cancel,
-					} : undefined}
 					compactionRunning={compacting}
 					onSubmitThinking={submitThinking}
 					chatId={chatId}
@@ -1474,8 +1228,6 @@ export function Chat({
 					cliContextWindow={cliContextWindowOf(nativeMessages)}
 					pricing={pricing}
 					onReserve={setDockReserve}
-					dictationSlot={<DictationBar dictation={dictation} disabled={dictationDisabled} iconOnly />}
-					dictationCancel={dictation.cancel}
 					queuedSteers={visibleQueuedSteers(steerQueue, nativeMessages)}
 					setupCta={
 						zeroKeys ? (
@@ -1497,7 +1249,6 @@ export function Chat({
 					}
 					composer={
 						<ChatSessionComposer
-							dictationSlot={<DictationBar dictation={dictation} disabled={dictationDisabled} iconOnly />}
 							busy={busy}
 							value={textRef.current}
 							pendingInput={pendingTextInput}
@@ -1507,8 +1258,6 @@ export function Chat({
 							onSend={onSend}
 							onStop={abortInFlightTurn}
 							sendAllowed={sendAllowed}
-							dictationActive={dictation.active}
-							onEscape={dictation.active ? dictation.cancel : undefined}
 							nextProblem={nextReady}
 							onNext={sendNext}
 							placeholder={nextReady ? "Ask anything, or press Enter for the next one." : undefined}
@@ -1531,7 +1280,6 @@ export function Chat({
 							chatId={chatId}
 							draft={sideThread.draftFor(sideThread.state.threadId)}
 							readDraft={sideThread.draftFor.bind(null, sideThread.state.threadId)}
-							dictation={sideDictationFor(sideThread.state.threadId)}
 							onDraftChange={sideThread.saveDraft.bind(null, sideThread.state.threadId)}
 							onAsk={(text, retry) => sideThread.ask(text, retry, sideThread.state!.threadId)}
 							onStop={sideThread.stop}
@@ -1549,7 +1297,6 @@ export function Chat({
 						chatId={chatId}
 						draft={sideThread.draftFor(sideThread.state.threadId)}
 						readDraft={sideThread.draftFor.bind(null, sideThread.state.threadId)}
-						dictation={sideDictationFor(sideThread.state.threadId)}
 						onDraftChange={sideThread.saveDraft.bind(null, sideThread.state.threadId)}
 						composer={() => composerInputRef.current}
 						onAsk={(text, retry) => sideThread.ask(text, retry, sideThread.state!.threadId)}
@@ -1563,7 +1310,7 @@ export function Chat({
 
 				{
 }
-				<SurfaceRegion target={surfaceTarget}>
+				<>
 				{mermaidFocus !== null && (
 					<MermaidOverlay chart={mermaidFocus} onClose={() => setMermaidFocus(null)} />
 				)}
@@ -1589,7 +1336,7 @@ export function Chat({
 						}}
 					/>
 				)}
-				</SurfaceRegion>
+				</>
 				<AbortTurnDialog mode={abortAsk} onClose={closeAbortAsk} onConfirm={confirmAbort} busy={busy} />
 				</div>
 			</div>
@@ -1664,14 +1411,13 @@ function TranscriptElementReporter({ onElement }: { onElement: (element: HTMLEle
 }
 
 export function DockOverlay({
-	viewReader, viewTargets, unavailableOccurrence,
 	pending,
-	onPrepareBuiltin, onBuiltinPendingInput, onPrepareThinking, pendingThinkingInput, onPreparePluginQuestion, preparing, preparationStatus,
-	pluginQuestion, pluginDraft, pluginAvailable, pluginReady, onPluginMicAvailable, onPluginSend, onPluginDismiss, unreadablePlugin, reconciliation, onRetrySync,
+	onPrepareBuiltin, onBuiltinPendingInput, onPrepareThinking, pendingThinkingInput, preparing, preparationStatus,
+	reconciliation, onRetrySync,
 	initialQuestionDraft,
 	onSaveQuestionDraft,
 	workingRef,
-	practice, pluginPractice,
+	practice,
 	compactionRunning,
 	onSubmitThinking,
 	requiresReveal,
@@ -1688,30 +1434,16 @@ export function DockOverlay({
 	onReserve,
 	plan,
 	onOpenPlan,
-	dictationSlot,
-	dictationCancel,
 	setupCta,
 	queuedSteers,
 }: {
-	viewReader?: SessionInputViewReader;
-	viewTargets?: SessionViewTargets;
-	unavailableOccurrence?: import("@/src/core").PluginSubmissionOccurrence;
 	pending: ReturnType<typeof pendingQuestionOf>;
 	onPrepareBuiltin: PrepareBuiltinSubmission;
 	onBuiltinPendingInput: (question: QuestionData) => boolean;
 	onPrepareThinking: PrepareThinkingSubmission;
 	pendingThinkingInput: boolean;
-	onPreparePluginQuestion: PreparePluginQuestionSubmission;
 	preparing: boolean;
 	preparationStatus: React.ReactNode;
-	pluginQuestion?: PluginQuestionSnapshot;
-	pluginDraft?: PluginQuestionDraft;
-	pluginAvailable: boolean;
-	pluginReady: boolean;
-	onPluginMicAvailable(available: boolean): void;
-	onPluginSend(input: ChatInput): Promise<boolean>;
-	onPluginDismiss(): Promise<void>;
-	unreadablePlugin: boolean;
 	reconciliation: "ready" | "syncing" | "failed";
 	onRetrySync(): void;
 	initialQuestionDraft?: QuestionFormDraft;
@@ -1719,7 +1451,6 @@ export function DockOverlay({
 	workingRef?: { current: string };
 	compactionRunning: boolean;
 	practice: { toolCallId: string; input: unknown } | null;
-	pluginPractice?: Omit<PluginProblemDockProps, "expanded" | "onExpand">;
 	onSubmitThinking: (text: string) => void;
 	requiresReveal: boolean;
 	readingThinking: string;
@@ -1735,8 +1466,6 @@ export function DockOverlay({
 	onReserve: (h: number) => void;
 	plan?: React.ReactNode;
 	onOpenPlan: () => void;
-	dictationSlot?: React.ReactNode;
-	dictationCancel?: () => void;
 	queuedSteers: QueuedSteerLine[];
 	setupCta?: React.ReactNode;
 }) {
@@ -1748,13 +1477,9 @@ export function DockOverlay({
 	const [revealed, setRevealed] = useState(false);
 	const revealPending = requiresReveal && !revealed;
 
-	const pendingId = pluginQuestion ? pluginQuestionOccurrenceKey(pluginQuestion.occurrence) : unreadablePlugin ? "unreadable-plugin-question" : pending?.key ?? null;
-	const ownsDock = !!pending || !!pluginQuestion || unreadablePlugin || !!practice || !!pluginPractice;
+	const pendingId = pending?.key ?? null;
+	const ownsDock = !!pending || !!practice;
 	const initialPendingRef = useRef(pendingId);
-	const [nativeViewReader] = useState<ViewReaderRef<NativeQuestionViewState>>(() => ({ current: null }));
-	const [practiceViewReader] = useState<ViewReaderRef<string>>(() => ({ current: null }));
-	const [customViewReader] = useState<ViewReaderRef<{ available: boolean }>>(() => ({ current: null }));
-	nativeViewReader.changed = practiceViewReader.changed = customViewReader.changed = viewReader?.changed;
 
 	const prevPendingIdRef = useRef(pendingId);
 	if (pendingId !== prevPendingIdRef.current) {
@@ -1788,34 +1513,12 @@ export function DockOverlay({
 	const bodyRef = useRef<HTMLDivElement>(null);
 	const shellRef = useRef<HTMLDivElement>(null);
 	const contentRef = useRef<HTMLDivElement>(null);
-	const mode = pluginQuestion ? `plugin-question:${pendingId}` : unreadablePlugin ? "unreadable-plugin-question" : pending
+	const mode = pending
 		? `question:${pending.key}`
 		: practice
-			? `practice:${pluginPractice?.snapshot.problemId ?? practice.toolCallId}`
+			? `practice:${practice.toolCallId}`
 			: "chat";
 
-	useLayoutEffect(() => {
-		if (!viewReader || !viewTargets) return;
-		const read = (): PluginSessionViewInput => {
-			if (pluginQuestion && pluginDraft && viewTargets.pluginQuestion) return { ...viewTargets.pluginQuestion, input: pluginQuestion.input, expanded, revealed: !revealPending,
-				available: customViewReader.current?.().available ?? false, draft: pluginDraft };
-			if (unreadablePlugin) return { type: "unavailable", ...(unavailableOccurrence ? { occurrence: unavailableOccurrence } : {}), expanded, revealed: !revealPending };
-			if (pending) {
-				const state = nativeViewReader.current?.();
-				const target = state && state.question.id === pending.toolCallId ? viewTargets.answer(state.question) : undefined;
-				return target && state ? { ...target, expanded, revealed: !revealPending, available: true, draft: { ...state.draft, readingThinking } }
-					: { type: "unavailable", occurrence: { messageId: pending.messageId, contentIndex: pending.contentIndex, toolCallId: pending.toolCallId, toolName: pending.tool }, expanded, revealed: !revealPending };
-			}
-			if (pluginPractice && viewTargets.pluginProblem) return { ...viewTargets.pluginProblem, input: pluginPractice.snapshot.input, expanded,
-				available: customViewReader.current?.().available ?? false, draft: pluginPractice.draft };
-			if (practice && viewTargets.thinking) return { ...viewTargets.thinking, expanded, draft: { thinking: practiceViewReader.current?.() ?? "" } };
-			return viewTargets.text;
-		};
-		viewReader.current = read;
-		return () => { if (viewReader.current === read) viewReader.current = null; };
-	});
-	const unavailableViewKey = unavailableOccurrence ? pluginQuestionOccurrenceKey(unavailableOccurrence) : "";
-	useLayoutEffect(() => { viewReader?.changed?.(); }, [viewReader, mode, expanded, revealPending, readingThinking, unavailableViewKey]);
 
 	const [flankW, setFlankW] = useState(0);
 	const flankWRef = useRef(0);
@@ -1903,9 +1606,9 @@ export function DockOverlay({
 	const expandAndRevealRef = useRef(expandAndReveal);
 	expandAndRevealRef.current = expandAndReveal;
 	useEffect(() => {
-		if ((!pending && !pluginQuestion && !unreadablePlugin) || expanded) return;
+		if (!pending || expanded) return;
 		const onKeyDown = (e: KeyboardEvent) => {
-			if (e.key !== "Enter" || e.altKey || e.defaultPrevented || pluginQuestionKeySuppressed(e) || composingQuestionKey(e) || !isInteractionScopeEligible(blockRef.current, controller)) return;
+			if (e.key !== "Enter" || e.altKey || e.defaultPrevented || composingQuestionKey(e) || !isInteractionScopeEligible(blockRef.current, controller)) return;
 			if (e.shiftKey && !e.metaKey && !e.ctrlKey) return;
 			const t = e.target as HTMLElement | null;
 			if (
@@ -1917,13 +1620,11 @@ export function DockOverlay({
 			)
 				return;
 			e.preventDefault();
-			void finishDictation().then(() => {
-				expandAndRevealRef.current();
-			});
+			expandAndRevealRef.current();
 		};
 		document.addEventListener("keydown", onKeyDown);
 		return () => document.removeEventListener("keydown", onKeyDown);
-	}, [pending, pluginQuestion, unreadablePlugin, expanded, controller]);
+	}, [pending, expanded, controller]);
 
 	useEffect(() => {
 		const el = scrollRef.current;
@@ -1991,16 +1692,8 @@ export function DockOverlay({
 							key={mode}
 							className={mode === initialModeRef.current ? "flow-root" : "flow-root dock-variant"}
 						>
-							{pluginQuestion && pluginDraft ? (
-								<PluginQuestionDock viewReader={customViewReader} snapshot={pluginQuestion} chatId={chatId} draft={pluginDraft} expanded={expanded} reveal={revealPending} onExpand={expandAndReveal} ready={pluginReady} available={pluginAvailable} reconciliation={reconciliation} onMicAvailable={onPluginMicAvailable} send={onPluginSend} dismiss={onPluginDismiss} prepareSubmission={onPreparePluginQuestion} />
-							) : unreadablePlugin ? (
-								<div className="px-4 py-3">
-									{reconciliation === "syncing" && <p role="status" className="text-sm text-muted-foreground">Preparing question…</p>}
-									{reconciliation === "ready" && <><p role="status" className="text-sm text-muted-foreground">Question unavailable</p><Button type="button" variant="ghost" disabled={!pluginReady} onClick={() => { void finishDictation().then(onPluginDismiss); }}>Dismiss question</Button></>}
-								</div>
-							) : pending ? (
+							{pending ? (
 								<QuestionDock
-									viewReader={nativeViewReader}
 									toolName={pending.tool as "quiz" | "probe" | "ask_user_question" | "explain" | "recall"}
 									toolCallId={pending.toolCallId}
 									input={pending.input as never}
@@ -2015,15 +1708,10 @@ export function DockOverlay({
 									initialDraft={initialQuestionDraft}
 									onSaveDraft={onSaveQuestionDraft}
 									workingRef={workingRef}
-									onEscape={dictationCancel}
-									dictationClaim={!revealPending}
 									compactionRunning={compactionRunning}
 								/>
-							) : pluginPractice ? (
-								<PluginProblemDock {...pluginPractice} viewReader={customViewReader} expanded={expanded} onExpand={() => { setExpanded(true); void suppressFoldDuringReveal(); }} />
 							) : practice ? (
 								<PracticeDock
-									viewReader={practiceViewReader}
 									problemCallId={practice.toolCallId}
 									input={practice.input as { statement: string }}
 									expanded={expanded}
@@ -2035,14 +1723,13 @@ export function DockOverlay({
 									onPrepareSubmission={onPrepareThinking}
 									hasPendingInput={pendingThinkingInput}
 									preparing={preparing}
-									onEscape={dictationCancel}
 									compactionRunning={compactionRunning}
 								/>
 							) : (
 								composer
 							)}
 						</div>
-						{ownsDock && <div className="flex items-center justify-end gap-2 px-2 pb-2"><AttachFilesButton />{dictationSlot}</div>}
+						{ownsDock && <div className="flex items-center justify-end gap-2 px-2 pb-2"><AttachFilesButton /></div>}
 					</div>
 					</div>
 					</div>
@@ -2062,7 +1749,7 @@ export function DockOverlay({
 				</div>
 				{
 }
-				{(pending || pluginQuestion) && plan && (
+				{pending && plan && (
 					<Hint label="Open the full plan" side="bottom">
 <button
 						type="button"

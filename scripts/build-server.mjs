@@ -1,7 +1,5 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { validateCorePackages } from "./build-core-plugins.mjs";
-import { buildPluginAuthoring } from "./build-plugin-authoring.mjs";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const STANDALONE = path.join(ROOT, ".next", "standalone");
@@ -44,21 +42,7 @@ for (const secret of ["auth.json", ...subscriptionSecrets, ".env", ".env.local"]
 	}
 }
 
-copyTree(path.join(ROOT, "scripts", "plugin-loader.cjs"), path.join(STANDALONE, "scripts", "plugin-loader.cjs"));
-try {
-	const core = path.join(ROOT, "core-plugins"), packagedCore = path.join(STANDALONE, "core-plugins");
-	validateCorePackages(ROOT, core);
-	fs.rmSync(packagedCore, { recursive: true, force: true });
-	copyTree(core, packagedCore);
-	validateCorePackages(ROOT, packagedCore);
-} catch (error) {
-	console.error("[build-server] REFUSING: Core plugin payload is missing or unsafe. Run npm run plugins:build-core.", error);
-	process.exit(1);
-}
-
-buildPluginAuthoring({ root: ROOT, standalone: true });
-
-for (const extra of ["plugins", "dist"]) {
+for (const extra of ["dist"]) {
 	const target = path.join(STANDALONE, extra);
 	if (exists(target)) {
 		fs.rmSync(target, { recursive: true, force: true });
@@ -67,8 +51,8 @@ for (const extra of ["plugins", "dist"]) {
 }
 
 for (const asset of [
-	path.join("scripts", "plugin-loader.cjs"),
-	path.join("public", "plugin-loader.js"),
+
+
 	path.join("src", "agent", "system-prompt.md"),
 	path.join("src", "agent", "prompts", "teacher", "20-teaching.md"),
 	path.join("src", "agent", "prompts", "side-chat", "00-base.md"),

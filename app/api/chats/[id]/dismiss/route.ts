@@ -1,9 +1,8 @@
-import { assertPluginQuestionInputAllowed, ChatInputError, dismissAppends, emit, parseDismissInput } from "@/src/core";
-import { abortTurn, getChat, isTurnRunning, parkDismissal, stores, preparePluginQuestionDismissal, reconcilePluginQuestionCompatibility } from "@/src/server";
+import { assertPluginQuestionInputAllowed,ChatInputError,dismissAppends,emit,parseDismissInput } from "@/src/core";
+import { getChat,isTurnRunning,parkDismissal,stores } from "@/src/server";
 
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
 	const { id } = await ctx.params;
-	await reconcilePluginQuestionCompatibility(stores.chatStore, id);
 	let chat = getChat(id);
 	if (!chat) return Response.json({ error: "Unknown chat" }, { status: 404 });
 
@@ -22,7 +21,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 	let appends;
 	try {
 		assertPluginQuestionInputAllowed(chat.messages, input);
-		if (input.type === "dismiss-plugin-question") appends = preparePluginQuestionDismissal(chat, input);
+		if (input.type === "dismiss-plugin-question") throw new ChatInputError("Unsupported input type");
 	} catch (err) {
 		if (err instanceof ChatInputError) return Response.json({ error: err.message }, { status: 400 });
 		throw err;
@@ -30,7 +29,6 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
 	if (isTurnRunning(id)) {
 		parkDismissal(id, input);
-		if (input.type === "dismiss-plugin-question") abortTurn(id);
 		return Response.json({ ok: true, parked: true }, { status: 202 });
 	}
 

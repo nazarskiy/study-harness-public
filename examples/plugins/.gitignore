@@ -1,3 +1,0 @@
-# These no-build examples intentionally ship runtime files in their fixed dist/.
-!*/dist/
-!*/dist/**

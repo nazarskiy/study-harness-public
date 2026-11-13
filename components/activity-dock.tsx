@@ -1,12 +1,13 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIcon, BotIcon, FileTextIcon, PenToolIcon, PlayIcon, SearchIcon, SquareIcon, WaypointsIcon } from "@/components/ui/icons";
+import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { ActivityIcon, BotIcon, ChevronDownIcon, FileTextIcon, PenToolIcon, PlayIcon, SearchIcon, SquareIcon, WaypointsIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import type { CallUsage, JobKind, JobRecord } from "@/src/core";
 import { isModelsRefusal, isProviderKeyRefusal, subscriptionLabel, subscriptionLabels } from "@/src/core";
 import { formatTokens, planCostLabel } from "@/components/usage-format";
 import { useServerEvent, useServerResync } from "@/components/server-events";
+
 
 
 
@@ -30,29 +31,12 @@ export interface FeedExtraction {
 	startedAt: number;
 }
 
-export interface FeedPluginWorker {
-	id: string;
-	taskId: string;
-	pluginId: string;
-	definitionId: string;
-	status: "queued" | "running";
-	title: string;
-	createdAt: string;
-	updatedAt: string;
-	activity?: string;
-	model: { provider: string; id: string };
-	usage?: FeedUsage;
-	costUsd: number | null;
-	contextLimit: number | null;
-}
-
 export interface ActivityFeed {
 	jobs: FeedJob[];
-	pluginWorkers?: FeedPluginWorker[];
 	extractions: FeedExtraction[];
 }
 
-const EMPTY_FEED: ActivityFeed = { jobs: [], pluginWorkers: [], extractions: [] };
+const EMPTY_FEED: ActivityFeed = { jobs: [], extractions: [] };
 
 
 const ActivityContext = createContext<{ feed: ActivityFeed; refresh: () => void }>({
@@ -76,7 +60,7 @@ export function ActivityProvider({ children }: { children: React.ReactNode }) {
 				if (res.ok) {
 					const data = (await res.json()) as Partial<ActivityFeed>;
 					if (alive)
-						setFeed({ jobs: data.jobs ?? [], pluginWorkers: data.pluginWorkers ?? [], extractions: data.extractions ?? [] });
+						setFeed({ jobs: data.jobs ?? [], extractions: data.extractions ?? [] });
 				}
 			} catch {
 			}
@@ -122,7 +106,7 @@ export function useActivity(): { feed: ActivityFeed; refresh: () => void } {
 
 export interface ActivityBlob {
 	id: string;
-	process: "job" | "plugin-worker" | "extraction";
+	process: "job" | "extraction";
 	jobKind?: JobKind;
 	phase?: string;
 	title: string;
@@ -169,20 +153,6 @@ export function toBlobs(feed: ActivityFeed): ActivityBlob[] {
 			steps: usage?.steps,
 		};
 	});
-	for (const task of feed.pluginWorkers ?? []) {
-		const last = task.usage?.lastStep;
-		blobs.push({
-			id: task.id, process: "plugin-worker", jobKind: "plugin", title: task.title,
-			startedAt: Date.parse(task.createdAt) || 0,
-			cost: task.costUsd ?? null,
-			context: task.contextLimit !== null && last?.inputTokens !== undefined
-				? { used: last.inputTokens + (last.outputTokens ?? 0) + (last.cacheReadTokens ?? 0) + (last.cacheWriteTokens ?? 0), limit: task.contextLimit }
-				: null,
-			activity: task.activity ?? task.status,
-			model: task.usage?.model ?? `${task.model.provider}:${task.model.id}`,
-			steps: task.usage?.steps,
-		});
-	}
 	for (const run of feed.extractions) {
 		blobs.push({
 			id: run.id,
@@ -229,14 +199,28 @@ const KIND_ICON: Record<JobKind, typeof SearchIcon> = {
 
 type AbortState = "pending" | "failed";
 
+const ACTIVITY_OPEN_KEY = "owlly:background-agents-open";
+
 export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
 	const ctx = useContext(ActivityContext);
 	const feed = feedProp ?? ctx.feed;
 	const refresh = ctx.refresh;
 	const blobs = useMemo(() => toBlobs(feed), [feed]);
+	const [expanded, setExpanded] = useState(false);
+	const contentId = useId();
+	useEffect(() => {
+		try { setExpanded(localStorage.getItem(ACTIVITY_OPEN_KEY) === "1"); }
+		catch { /* Keep the collapsed default when browser storage is unavailable. */ }
+	}, []);
+	const toggleExpanded = () => {
+		const next = !expanded;
+		setExpanded(next);
+		try { localStorage.setItem(ACTIVITY_OPEN_KEY, next ? "1" : "0"); }
+		catch { /* Expansion still works without persistent browser storage. */ }
+	};
 	const [openBlob, setOpenBlob] = useState<string | null>(null);
 	const [abortStates, setAbortStates] = useState<Record<string, AbortState>>({});
-	const now = useNow(blobs.length > 0);
+	const now = useNow(expanded && blobs.length > 0);
 	const abortRef = useRef({ blobs, refresh, setAbortStates });
 	abortRef.current = { blobs, refresh, setAbortStates };
 
@@ -276,17 +260,29 @@ export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
 
 	return (
 		<section data-testid="activity-section" className="border-t-2 border-border px-3 pb-3 pt-3">
-			<div className="mb-1.5 flex items-center gap-2 px-3 text-sm font-extrabold text-muted-foreground">
-				<ActivityIcon className="size-4" />
-				Background agents
-				{blobs.length > 0 && (
-					<span className="ml-auto tabular-nums" data-testid="activity-total-cost" title="Total running cost (inferred)">
-						{planCostLabel(totalCost, subscriptionLabels(blobs.map((blob) => blob.model)))}
+			<button
+				type="button"
+				data-testid="activity-toggle"
+				aria-expanded={expanded}
+				aria-controls={contentId}
+				onClick={toggleExpanded}
+				className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-extrabold text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+			>
+				<ActivityIcon aria-hidden className="size-4 shrink-0" />
+				<span className="min-w-0 flex-1">Background agents</span>
+				<span data-testid="activity-count" className="flex min-w-5 items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums text-foreground">
+					{blobs.length}
 				</span>
-				)}
-			</div>
-			{blobs.length > 0 && (
-				<div className="flex max-h-[40dvh] flex-col gap-1 overflow-y-auto">
+				<ChevronDownIcon aria-hidden className={cn("size-4 shrink-0 transition-transform", !expanded && "-rotate-90")} />
+			</button>
+			<div id={contentId} hidden={!expanded}>
+				{blobs.length > 0 ? <>
+					<div className="flex justify-end px-3 py-2 text-xs font-bold text-muted-foreground">
+						<span data-testid="activity-total-cost" title="Total running cost (inferred)">
+							{planCostLabel(totalCost, subscriptionLabels(blobs.map((blob) => blob.model)))}
+						</span>
+					</div>
+				<div className="flex max-h-[40dvh] flex-col gap-2 overflow-y-auto">
 					{blobs.map((blob) => (
 						<ActivityBlobRow
 							key={blob.id}
@@ -298,8 +294,9 @@ export function ActivitySection({ feed: feedProp }: { feed?: ActivityFeed }) {
 							onAbort={() => void abort(blob)}
 						/>
 					))}
+				</div>
+				</> : <p data-testid="activity-empty" className="px-3 pb-1 pt-3 text-xs font-medium text-muted-foreground">No background tasks running</p>}
 			</div>
-			)}
 		</section>
 	);
 }
@@ -338,7 +335,7 @@ function ActivityBlobRow({
 		<div
 			data-testid={`activity-blob-${blob.process}`}
 			data-activity-id={blob.id}
-			className="relative rounded-xl px-3 py-2 text-xs font-semibold transition-colors hover:bg-accent"
+			className="relative rounded-xl border-2 border-border bg-card px-3 py-2 text-xs font-semibold transition-colors hover:bg-accent"
 		>
 			<button
 				type="button"

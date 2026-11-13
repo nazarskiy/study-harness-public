@@ -1,24 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-	AUTH_KEYS,
-	CUSTOM_MODEL_DEFAULT_CONTEXT_WINDOW,
-	CUSTOM_MODEL_DEFAULT_MAX_TOKENS,
-	CUSTOM_PROVIDER,
-	normalizeBaseUrl,
-	type AuthKeyStatus,
-	type CustomModel,
-	type CustomModelOverride,
-} from "@/src/core";
-import { SettingsGroup } from "./controls.tsx";
-import { SubscriptionConnections } from "./subscription-connections.tsx";
-import { ProviderMenuList } from "./model-menu.tsx";
-import { useInteractionLayer, useInteractionLayers, useOptionalInteractionLayers } from "@/components/interaction-layers";
-import { isInteractionScopeEligible } from "@/components/plugin-input-focus";
+import { isInteractionScopeEligible } from "@/components/interaction-focus";
+import { useInteractionLayer,useInteractionLayers,useOptionalInteractionLayers } from "@/components/interaction-layers";
 import { MenuShell } from "@/components/menu-shell";
 import { notifySettingsSaved } from "@/components/settings-signal";
-import { DictationLanguageSetting } from "@/components/dictation-language";
+import {
+AUTH_KEYS,
+CUSTOM_MODEL_DEFAULT_CONTEXT_WINDOW,
+CUSTOM_MODEL_DEFAULT_MAX_TOKENS,
+CUSTOM_PROVIDER,
+normalizeBaseUrl,
+type AuthKeyStatus,
+type CustomModel,
+type CustomModelOverride,
+} from "@/src/core";
+import { useEffect,useRef,useState } from "react";
+import { SettingsGroup } from "./controls.tsx";
+import { ProviderMenuList } from "./model-menu.tsx";
+import { SubscriptionConnections } from "./subscription-connections.tsx";
 
 export interface ProviderKeyInfo {
 	id: string;
@@ -63,21 +62,12 @@ export function classifyKeys(
 	providers: readonly ProviderKeyInfo[] | undefined,
 ): {
 	providerRows: AuthKeyStatus[];
-	toolRows: AuthKeyStatus[];
 	unknownRows: AuthKeyStatus[];
 	addable: ProviderKeyInfo[];
 } {
 	const byId = new Map(statuses.map((s) => [s.id, s]));
 	const isTool = (id: string) => (TOOL_IDS as readonly string[]).includes(id);
 	const providerEnv = new Set((providers ?? []).map((p) => p.envVar));
-	const synth = (id: string): AuthKeyStatus => ({
-		id,
-		info: null,
-		present: false,
-		masked: null,
-		source: "none",
-		shadowedByEnv: false,
-	});
 	const providerRows: AuthKeyStatus[] = [];
 	const unknownRows: AuthKeyStatus[] = [];
 	for (const s of statuses) {
@@ -89,7 +79,6 @@ export function classifyKeys(
 	}
 	return {
 		providerRows,
-		toolRows: TOOL_IDS.map((id) => byId.get(id) ?? synth(id)),
 		unknownRows,
 		addable: (providers ?? []).filter((p) => !byId.has(p.envVar)),
 	};
@@ -389,7 +378,7 @@ export function KeysSection({
 		return <p className="px-6 py-5 text-xs text-muted-foreground/70">Loading keys…</p>;
 	}
 
-	const { providerRows, toolRows, unknownRows, addable } = classifyKeys(statuses, providers);
+	const { providerRows, unknownRows, addable } = classifyKeys(statuses, providers);
 
 	async function saveNewProvider(p: ProviderKeyInfo, value: string) {
 		const err = await saveKey(p.envVar, value);
@@ -491,38 +480,6 @@ export function KeysSection({
 
 			<SettingsGroup label="Subscriptions" testid="group-subscriptions">
 				<SubscriptionConnections />
-			</SettingsGroup>
-
-			<SettingsGroup label="Dictation" testid="group-dictation">
-				{toolRows.filter((status) => status.id === "DEEPGRAM_API_KEY").map((status) => (
-					<KeyTableRow
-						key={status.id}
-						label={status.info?.label ?? status.id}
-						docsUrl={status.info?.docsUrl}
-						status={status}
-						expanded={openRow === status.id}
-						onToggle={() => setOpenRow(openRow === status.id ? null : status.id)}
-						onSave={async (v) => {
-							const err = await saveKey(status.id, v);
-							if (!err) setOpenRow(null);
-							return err;
-						}}
-						onCancel={() => setOpenRow(null)}
-						onDelete={() => deleteKey(status.id)}
-						testid={`key-${status.id.toLowerCase()}`}
-					/>
-				))}
-				<>
-					<DictationLanguageSetting />
-					<p data-testid="dictation-setup-hint" className="px-1 text-xs leading-relaxed text-muted-foreground/70">
-						Create a <a
-							href="https://console.deepgram.com/"
-							target="_blank"
-							rel="noreferrer"
-							className="underline underline-offset-2 hover:text-foreground"
-						>Deepgram API key</a> with the Member role or higher, then add it above.
-					</p>
-				</>
 			</SettingsGroup>
 
 		</div>

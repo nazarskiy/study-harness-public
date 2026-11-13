@@ -2,42 +2,35 @@
 import type { AgentEvent } from "@earendil-works/pi-agent-core";
 import type { ToolResultMessage } from "@earendil-works/pi-ai";
 import {
-	needsContinuation,
-	activeProblemOf,
-	activeProblemOccurrenceOf,
-	pendingQuestionOf,
-	failedResponseAtEnd,
-	measuredContextTokens,
-	newAnswerResult,
-	newNextMessage,
-	newProblemDismissedMarker,
-	newThinkingMessage,
-	newUserMessage,
-	projectView,
-	type ChatInput,
-	type OwllyMarkerMessage,
-	type OwllyMessage,
-	type OwllyViewMessage,
-	type LiveExecution,
-	type QuestionAnswerData,
-	type QuestionDraft,
-	type TurnUsage,
-	type SessionPricing,
+failedResponseAtEnd,
+measuredContextTokens,
+needsContinuation,
+newAnswerResult,
+newNextMessage,
+newProblemDismissedMarker,
+newThinkingMessage,
+newUserMessage,
+pendingQuestionOf,
+projectView,
+type ChatInput,
+type LiveExecution,
+type OwllyMarkerMessage,
+type OwllyMessage,
+type OwllyViewMessage,
+type QuestionAnswerData,
+type QuestionDraft,
+type SessionPricing,
+type TurnUsage
 } from "../src/core";
 
-import { copyImmutableData, pendingPluginQuestionOf, pluginQuestionCallsOf } from "../src/core/index.ts";
-import { pluginQuestionOccurrenceKey, samePluginQuestionOccurrence, type PluginQuestionAnswerState, type PluginQuestionSnapshot, type PluginQuestionOccurrence } from "../src/core/index.ts";
+import { copyImmutableData } from "../src/core/index.ts";
 
-import type { PluginProblemSnapshot, PluginProblemSubmissionState } from "../src/core/index.ts";
 
-export interface PluginProblemAvailability { problemId: string; status: "available" | "unavailable" }
-export interface PluginProblemDraft { submission: PluginProblemSubmissionState; thinking: string }
-export interface PluginQuestionAvailability { questionId: string; status: "available" | "unavailable" }
 export interface SessionRecordSnapshot {
-	pluginProblemAvailability?: PluginProblemAvailability;
+
 	messages: OwllyMessage[];
 	turnError?: string;
-	pluginQuestionAvailability?: PluginQuestionAvailability;
+
 	turnInFlight?: boolean;
 	turns?: TurnUsage[];
 	pricing?: SessionPricing;
@@ -49,7 +42,7 @@ export interface SessionRecordReadOptions {
 	allowInFlight?: boolean;
 	tolerateHttpFailure?: boolean;
 }
-export interface PluginQuestionDraft { answer: PluginQuestionAnswerState; thinking: string; readingThinking: string }
+
 export type SessionStatus = "ready" | "submitted" | "streaming" | "error";
 
 export interface SessionModelDeps {
@@ -139,7 +132,7 @@ function sameDetails(a: unknown, b: unknown): boolean {
 }
 
 export interface SessionState {
-	pluginProblemAvailability?: PluginProblemAvailability;
+
 	messages: OwllyViewMessage[];
 	nativeMessages: OwllyMessage[];
 	canonicalMessages: OwllyMessage[];
@@ -148,7 +141,7 @@ export interface SessionState {
 	status: SessionStatus;
 	evaluating: boolean;
 	reconciliation: "ready" | "syncing" | "failed";
-	pluginQuestionAvailability?: PluginQuestionAvailability;
+
 	error: { message: string } | null;
 	steerQueue: SteerQueueItem[];
 }
@@ -184,11 +177,10 @@ export class SessionModel {
 	private base: OwllyMessage[];
 	private tail: OwllyMessage[] = [];
 	private questionDrafts = new Map<string, QuestionDraft>();
-	private pluginQuestionDrafts = new Map<string, PluginQuestionDraft>();
-	private pluginProblemDrafts = new Map<string, PluginProblemDraft>();
-	private pluginProblemAvailability?: PluginProblemAvailability;
+
+
 	private reconciliationValue: SessionState["reconciliation"] = "ready";
-	private pluginQuestionAvailability?: PluginQuestionAvailability;
+
 	private reconciliationTask: Promise<boolean> | null = null;
 	private reconciliationOwner: AbortController | null = null;
 	private connectionGeneration = 0;
@@ -218,7 +210,7 @@ export class SessionModel {
 		this.chatId = opts.chatId;
 		this.base = copyImmutableData(opts.initialMessages);
 		this.tail = copyImmutableData(this.tail);
-		if (pluginQuestionCallsOf(this.base).some(call => call.status === "answerable" || call.status === "unreadable")) { this.reconciliationValue = "syncing"; this.readyRef = false; }
+
 		this.errorValue = opts.initialError === undefined ? null : { message: opts.initialError };
 		this.automaticContinuationBlocked = opts.initialError !== undefined;
 		this.fetch = opts.fetch ?? ((...args) => globalThis.fetch(...args));
@@ -258,8 +250,8 @@ export class SessionModel {
 			status: this.statusValue,
 			evaluating: this.statusValue === "submitted" && this.evaluationOwner !== null && this.evaluationOwner === this.consumeAbort,
 			reconciliation: this.reconciliationValue,
-			pluginQuestionAvailability: this.pluginQuestionAvailability,
-			pluginProblemAvailability: this.pluginProblemAvailability,
+
+
 			error: this.errorValue ?? providerError,
 			steerQueue: this.steerQueueValue,
 		};
@@ -329,11 +321,11 @@ export class SessionModel {
 		if (mode !== "none" && this.imagePostOwner) return undefined;
 		if (mode === "replace" && !options.allowInFlight && (this.statusValue === "submitted" || this.statusValue === "streaming")) return undefined;
 		if (mode === "append") {
-			if (!this.appendMessages(record.messages, record.pluginQuestionAvailability, true, record.pluginProblemAvailability)) return undefined;
+			if (!this.appendMessages(record.messages)) return undefined;
 			this.canonicalAcknowledged = Math.max(this.canonicalAcknowledged, ticket);
 		} else if (mode === "replace") {
 			this.canonicalAcknowledged = Math.max(this.canonicalAcknowledged, ticket);
-			this.replaceMessages(record.messages, record.turnError, record.pluginQuestionAvailability, record.pluginProblemAvailability);
+			this.replaceMessages(record.messages, record.turnError);
 		}
 		return record;
 	}
@@ -379,33 +371,6 @@ export class SessionModel {
 		return task;
 	}
 
-	pluginProblemDraft(snapshot: PluginProblemSnapshot): PluginProblemDraft {
-		let draft = this.pluginProblemDrafts.get(snapshot.problemId);
-		if (!draft) { draft = { submission: { status: "empty" }, thinking: "" }; this.pluginProblemDrafts.set(snapshot.problemId, draft); }
-		return draft;
-	}
-
-	pluginQuestionDraft(snapshot: PluginQuestionSnapshot): PluginQuestionDraft {
-		const key = pluginQuestionOccurrenceKey(snapshot.occurrence);
-		let draft = this.pluginQuestionDrafts.get(key);
-		if (!draft) { draft = { answer: { status: "empty" }, thinking: "", readingThinking: "" }; this.pluginQuestionDrafts.set(key, draft); }
-		return draft;
-	}
-
-	async dismissPluginQuestion(occurrence: PluginQuestionOccurrence, questionId?: string): Promise<void> {
-		if (!this.readyRef) return;
-		const current = pluginQuestionCallsOf(this.base).find(call => (call.status === "answerable" || call.status === "unreadable") && samePluginQuestionOccurrence(call.occurrence, occurrence));
-		if (!current || (current.snapshot ? current.snapshot.questionId !== questionId : current.annotation.status !== "unreadable" || (questionId !== undefined && (current.annotation.binding?.questionId ?? current.annotation.identity?.questionId) !== questionId))) return;
-		this.setStatus("submitted");
-		try {
-			const response = await this.fetch(`/api/chats/${encodeURIComponent(this.chatId)}/dismiss`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ input: { type: "dismiss-plugin-question", occurrence, ...(questionId ? { questionId } : {}) } }) });
-			if (!response.ok) throw new Error("The dismissal failed.");
-			await response.text();
-			this.invalidateCanonicalReads();
-			await this.reconcile();
-		} catch (error) { this.setError((error as Error).message); }
-		finally { this.setStatus("ready"); }
-	}
 
 	async postInputEvent(input: ChatInput, signal?: AbortSignal, onPostPending?: (pending: boolean) => void): Promise<Response> {
 		onPostPending?.(true);
@@ -598,33 +563,21 @@ export class SessionModel {
 		const refused = () => { settleDelivery(); return false; };
 		const recovering = this.statusValue === "error";
 		if (this.reconciliationValue !== "ready" || (!this.readyRef && !recovering)) return refused();
-		const pluginPending = pendingPluginQuestionOf(this.base);
-		if (!pluginPending && pluginQuestionCallsOf(this.base).some(call => call.status === "unreadable")) return refused();
-		if (pluginPending) {
-			if (this.pluginQuestionAvailability?.questionId !== pluginPending.questionId || this.pluginQuestionAvailability.status !== "available") return refused();
-			if (input.type !== "plugin-question-answer" || input.questionId !== pluginPending.questionId || !samePluginQuestionOccurrence(input.occurrence, pluginPending.occurrence)) return refused();
-		} else if (input.type === "plugin-question-answer") return refused();
-		if (input.type === "plugin-problem-submission") {
-			const active = activeProblemOf(this.base)?.pluginProblem, occurrence = activeProblemOccurrenceOf(this.base);
-			if (!active || active.problemId !== input.problemId || !occurrence || !samePluginQuestionOccurrence(occurrence, input.occurrence) ||
-				this.pluginProblemAvailability?.problemId !== active.problemId || this.pluginProblemAvailability.status !== "available") return refused();
-		}
-		if (input.type === "thinking" && activeProblemOf(this.base)?.pluginProblem) return refused();
+		if (input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") return refused();
 		const subject = input.type === "answer" ? pendingQuestionOf(this.nativeHistory()) : null;
 		if (input.type === "answer" && questionKey !== undefined &&
 			(subject?.key !== questionKey || subject.toolCallId !== input.toolCallId)) return refused();
 		const expectedKey = questionKey ?? (input.type === "answer" && subject?.toolCallId === input.toolCallId ? subject.key : undefined);
 		const imageBearing = input.type === "text" || input.type === "thinking" ? !!input.images?.length
 			: input.type === "answer" ? Object.values(input.answer.images ?? {}).some(images => images?.length)
-				: (input.type === "plugin-question-answer" || input.type === "plugin-problem-submission") && Object.values(input.images ?? {}).some(images => images?.length);
+				: false;
 		this.retireImagePreview(this.imagePreview?.owner ?? null);
 		this.releaseImagePost(this.imagePostOwner);
 		this.consumeAbort?.abort();
 		const controller = new AbortController();
 		this.consumeAbort = controller;
 		this.latestRequest = controller;
-		this.evaluationOwner = (input.type === "plugin-question-answer" && pluginPending?.requiresGrading) ||
-			(input.type === "plugin-problem-submission" && activeProblemOf(this.base)?.pluginProblem?.requiresProcessing) ? controller : null;
+		this.evaluationOwner = null;
 		this.setError(null);
 		this.setStatus("submitted");
 		if (input.type !== "continue") this.automaticContinuationBlocked = false;
@@ -741,7 +694,7 @@ export class SessionModel {
 	}
 
 	async dismissQuestion(toolCallId: string, answer: QuestionAnswerData, questionKey?: string): Promise<void> {
-		if (!this.readyRef || pluginQuestionCallsOf(this.base).some(call => call.status === "answerable" || call.status === "unreadable")) return;
+		if (!this.readyRef) return;
 		const subject = pendingQuestionOf(this.nativeHistory());
 		if (questionKey !== undefined && (subject?.key !== questionKey || subject.toolCallId !== toolCallId)) return;
 		const tool = pendingCallTool(this.nativeHistory(), toolCallId) ?? "quiz";
@@ -812,27 +765,24 @@ export class SessionModel {
 		}
 	}
 
-	setMessages(record: OwllyMessage[], turnError?: string, availability?: PluginQuestionAvailability, problemAvailability?: PluginProblemAvailability): void {
+	setMessages(record: OwllyMessage[], turnError?: string): void {
 		this.invalidateCanonicalReads();
-		this.replaceMessages(record, turnError, availability, problemAvailability);
+		this.replaceMessages(record, turnError);
 	}
 
-	private replaceMessages(record: OwllyMessage[], turnError?: string, availability?: PluginQuestionAvailability, problemAvailability?: PluginProblemAvailability): void {
+	private replaceMessages(record: OwllyMessage[], turnError?: string): void {
 		if (this.imagePostOwner) return;
 		record = copyImmutableData(record);
 		this.mutate(() => {
 			this.base = record;
-			this.pluginQuestionAvailability = availability;
-			this.pluginProblemAvailability = problemAvailability;
-			const problemId = activeProblemOf(record)?.pluginProblem?.problemId;
-			for (const key of this.pluginProblemDrafts.keys()) if (key !== problemId) this.pluginProblemDrafts.delete(key);
+
 			if (turnError !== undefined) {
 				this.errorValue = { message: turnError };
 				this.automaticContinuationBlocked = true;
 			}
 			this.forgetResolvedDrafts(record);
-			const pluginKeys = new Set(pluginQuestionCallsOf(record).map(call => pluginQuestionOccurrenceKey(call.occurrence)));
-			for (const key of this.pluginQuestionDrafts.keys()) if (!pluginKeys.has(key)) this.pluginQuestionDrafts.delete(key);
+
+
 			this.incompleteUsageIds.clear();
 			this.tail = [];
 			this.imagePreview = null;
@@ -845,7 +795,7 @@ export class SessionModel {
 		this.appendMessages(record);
 	}
 
-	private appendMessages(record: OwllyMessage[], availability?: PluginQuestionAvailability, updateAvailability = false, problemAvailability?: PluginProblemAvailability): boolean {
+	private appendMessages(record: OwllyMessage[]): boolean {
 		if (this.imagePostOwner) return false;
 		record = copyImmutableData(record);
 		const recordIds = new Set(record.map((m) => (m as { id?: string }).id));
@@ -853,7 +803,7 @@ export class SessionModel {
 		if (baseAbsorbed) return false;
 		this.mutate(() => {
 			this.base = record;
-			if (updateAvailability) { this.pluginQuestionAvailability = availability; this.pluginProblemAvailability = problemAvailability; }
+
 			this.forgetResolvedDrafts(record);
 			this.tail = this.tail.filter((m) => !(typeof m.id === "string" && recordIds.has(m.id)) && !absorbed(m, record));
 		});

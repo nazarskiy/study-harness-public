@@ -1,11 +1,11 @@
 "use client";
 
 
-import { useEffect, useRef, type RefObject } from "react";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { pluginQuestionKeySuppressed, composingQuestionKey } from "./plugin-question-keys";
 import { isTypingSurface } from "@/src/core";
+import { useEffect,useRef,type RefObject } from "react";
+import { composingQuestionKey } from "./input-keys";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useOptionalInteractionLayers } from "./interaction-layers";
 
 const OVERLAY_ROOTS = '[data-owlly-menu], [data-radix-popper-content-wrapper], [role="menu"], [role="dialog"]';
 
@@ -23,7 +23,7 @@ export function useEnterSubmits(submit: () => void, scopeRef?: RefObject<HTMLEle
 	submitRef.current = submit;
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key !== "Enter" || e.defaultPrevented || pluginQuestionKeySuppressed(e) || composingQuestionKey(e)) return;
+			if (e.key !== "Enter" || e.defaultPrevented || composingQuestionKey(e)) return;
 			if (!isInteractionScopeEligible(scopeRef ? scopeRef.current : document.body, controller)) return;
 			if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
 			if (isTypingSurface(e)) return;

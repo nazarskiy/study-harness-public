@@ -10,8 +10,6 @@ export interface ServerEvents {
 	"record-changed": { chatId: string };
 	"compaction-changed": { chatId: string; running: boolean };
 	"side-chats-changed": { chatId: string };
-	"plugins-changed": Record<string, never>;
-	"plugin-message": { pluginId: string; topic: string; data?: unknown };
 }
 
 export type ServerEventType = keyof ServerEvents;
@@ -27,8 +25,6 @@ export const SERVER_EVENT_TYPES = [
 	"record-changed",
 	"compaction-changed",
 	"side-chats-changed",
-	"plugins-changed",
-	"plugin-message",
 ] as const satisfies readonly ServerEventType[];
 
 export type ServerEvent<K extends ServerEventType = ServerEventType> = {

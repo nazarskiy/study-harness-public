@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { AppIcon } from "@/components/ui/icons";
-import { Button } from "./ui/button";
+import { useEffect,useLayoutEffect,useRef,useState } from "react";
+import { createPortal } from "react-dom";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { captureSelection, type CapturedSelection } from "./selection-text";
 import {
-	isSelectionRectVisible, observeSelectionActions, resolveSelectionActionPosition,
-	type RectLike, type SelectionActionPoint,
+isSelectionRectVisible,observeSelectionActions,resolveSelectionActionPosition,
+type RectLike,type SelectionActionPoint,
 } from "./selection-actions";
+import { captureSelection,type CapturedSelection } from "./selection-text";
+import { Button } from "./ui/button";
 
 export interface SelectionAction {
 	id: string;

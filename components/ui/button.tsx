@@ -1,9 +1,10 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { Slot } from "radix-ui"
+import { cva,type VariantProps } from "class-variance-authority";
+import { Slot } from "radix-ui";
+import * as React from "react";
 
-import { cn } from "@/lib/utils"
-import type { PluginButtonColors as ButtonColors } from "@/src/core"
+import { cn } from "@/lib/utils";
+interface ButtonColorState { background?: string; text?: string; border?: string }
+interface ButtonColors extends ButtonColorState { hover?: ButtonColorState; active?: ButtonColorState; focusVisible?: ButtonColorState & { ring?: string }; disabled?: ButtonColorState }
 
 const PRESS = "active:translate-y-[3px] active:shadow-none disabled:shadow-none"
 
@@ -93,4 +94,4 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+export { Button,buttonVariants };

@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { serializeCitation, withCitationComment } from "@/src/core";
-import { MenuShell } from "./menu-shell";
-import { useInteractionLayers, type CloseOutcome } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { CitationCommentEditor, commentDismissalOutcome, type CommentDismissal } from "./citation-comment-editor";
+import { serializeCitation,withCitationComment } from "@/src/core";
+import { useEffect,useRef } from "react";
 import type { CitationEditTarget } from "./citation-actions";
+import { CitationCommentEditor,commentDismissalOutcome,type CommentDismissal } from "./citation-comment-editor";
 import { highlightRange } from "./citation-source";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useInteractionLayers,type CloseOutcome } from "./interaction-layers";
+import { MenuShell } from "./menu-shell";
+import { UPDATE_CITATION_EVENT,type UpdateCitationDetail } from "./path-input";
 import { PATH_SOURCE_ATTRIBUTE } from "./path-input-dom";
-import { UPDATE_CITATION_EVENT, type UpdateCitationDetail } from "./path-input";
 import { resolveCitationRange } from "./selection-text";
 
 export function CitationCommentPopover({ target, transcript, composer, onClose, onSend }: {

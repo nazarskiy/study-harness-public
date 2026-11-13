@@ -6,16 +6,13 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "npm run plugins:build-core && npm run plugins:build-authoring && next dev -H localhost",
-		"build": "npm run plugins:build-core && npm run plugins:build-authoring && next build",
+		"dev": "next dev -H localhost",
+		"build": "next build",
 		"start": "next start -H localhost",
 		"lint": "eslint .",
 		"typecheck": "tsc --noEmit",
 		"test:attachments": "node --import tsx --test tests/attachments.test.ts",
-		"test:demo": "node --import tsx --test tests/demo-mode.test.ts",
-		"plugins:setup": "node scripts/setup-plugins.mjs",
-		"plugins:build-authoring": "node scripts/build-plugin-authoring.mjs",
-		"plugins:build-core": "node scripts/build-core-plugins.mjs"
+		"test:demo": "node --import tsx --test tests/demo-mode.test.ts"
 	},
 	"dependencies": {
 		"@earendil-works/pi-agent-core": "1.4.0",

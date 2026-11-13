@@ -1,60 +1,47 @@
 "use client";
 
 
-import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { NotesImportControl, NotesImportErrors, NotesImportNotices, useNotesImport } from "@/components/notes-import.tsx";
-import { PluginGraphActions } from "@/components/plugin-chrome";
-import { SettingsSlider as SettingSlider } from "@/components/settings/controls";
-import Link from "next/link";
-import { FileTextIcon, ListTreeIcon, SearchIcon, SettingsIcon } from "@/components/ui/icons";
-import { incrementalLayout, propositionSessionHref, type GraphCostSummary, type GraphNode, type GraphSnapshot } from "@/src/core";
-import { planCostLabel } from "@/components/usage-format";
-import { CLUSTER_LIGHTNESS, GraphCanvasRenderer, type GraphRenderSettings } from "./graph-canvas.ts";
-import { useAppearance } from "@/components/settings/appearance";
-import { OwlHero } from "@/components/owl/owl-hero";
-import { Owl } from "@/components/owl/owl";
-import { usePopoverDismiss } from "@/components/popover-dismiss";
-import { INTERACTION_LAYER_Z_BASE } from "@/components/host-dialog";
 import { useActivity } from "@/components/activity-dock";
-import { useServerEvent, useServerResync } from "@/components/server-events";
-import { MenuShell } from "@/components/menu-shell.tsx";
-import { useInteractionLayers } from "@/components/interaction-layers";
-import { isInteractionScopeEligible } from "@/components/plugin-input-focus";
-import { DeleteNodeDialog } from "@/components/delete-node-dialog.tsx";
-import { ChainTableOverlay } from "@/components/chain-table.tsx";
 import { ToolContentResponse } from "@/components/ai-elements/message";
+import { ChainTableOverlay } from "@/components/chain-table.tsx";
+import { DeleteNodeDialog } from "@/components/delete-node-dialog.tsx";
+import { INTERACTION_LAYER_Z_BASE } from "@/components/host-dialog";
+import { isInteractionScopeEligible } from "@/components/interaction-focus";
+import { useInteractionLayers } from "@/components/interaction-layers";
+import { MenuShell } from "@/components/menu-shell.tsx";
+import { NotesImportControl,NotesImportErrors,NotesImportNotices,useNotesImport } from "@/components/notes-import.tsx";
+import { Owl } from "@/components/owl/owl";
+import { OwlHero } from "@/components/owl/owl-hero";
+import { usePopoverDismiss } from "@/components/popover-dismiss";
+import { useServerEvent,useServerResync } from "@/components/server-events";
+import { useAppearance } from "@/components/settings/appearance";
+import { SettingsSlider as SettingSlider } from "@/components/settings/controls";
 import { Hint } from "@/components/ui/hint";
+import { FileTextIcon,ListTreeIcon,SearchIcon,SettingsIcon } from "@/components/ui/icons";
+import { planCostLabel } from "@/components/usage-format";
 import {
-	ARROW_LENGTH_LADDER,
-	CHARGE_RANGE,
-	CLUSTER_LABEL_SIZE_LADDER,
-	CLUSTER_PULL_RANGE,
-	DEPTH_BASE_RADIUS_RANGE,
-	DEPTH_SPACING_RANGE,
-	DEPTH_STRENGTH_RANGE,
-	DEFAULT_RENDER_SETTINGS,
-	EDGE_WIDTH_LADDER,
-	GRAVITY_RANGE,
-	LABEL_SIZE_LADDER,
-	LABEL_ZOOM_LADDER,
-	LINK_DISTANCE_RANGE,
-	LINK_STRENGTH_RANGE,
-	NODE_SIZE_LADDER,
-	REGION_BITMAP_OPTIONS,
-	REGION_BLUR_LADDER,
-	fromLadderPosition,
-	snapToLadder,
-	toLadderPosition,
-	REGION_DILATION_LADDER,
-	REGION_EDGE_ALPHA_LADDER,
-	VELOCITY_DECAY_RANGE,
-	fromOffSliderPosition,
-	fromSliderPosition,
-	labelZoomDisplay,
-	sanitizeRenderSettings,
-	toOffSliderPosition,
-	toSliderPosition,
+ARROW_LENGTH_LADDER,
+CHARGE_RANGE,
+CLUSTER_LABEL_SIZE_LADDER,
+CLUSTER_PULL_RANGE,DEFAULT_RENDER_SETTINGS,DEPTH_BASE_RADIUS_RANGE,
+DEPTH_SPACING_RANGE,
+DEPTH_STRENGTH_RANGE,EDGE_WIDTH_LADDER,
+GRAVITY_RANGE,
+LABEL_SIZE_LADDER,
+LABEL_ZOOM_LADDER,
+LINK_DISTANCE_RANGE,
+LINK_STRENGTH_RANGE,
+NODE_SIZE_LADDER,
+REGION_BITMAP_OPTIONS,
+REGION_BLUR_LADDER,REGION_DILATION_LADDER,
+REGION_EDGE_ALPHA_LADDER,
+VELOCITY_DECAY_RANGE,fromLadderPosition,fromOffSliderPosition,
+fromSliderPosition,incrementalLayout,labelZoomDisplay,propositionSessionHref,sanitizeRenderSettings,toLadderPosition,toOffSliderPosition,
+toSliderPosition,type GraphCostSummary,type GraphNode,type GraphSnapshot
 } from "@/src/core";
+import Link from "next/link";
+import { useCallback,useDeferredValue,useEffect,useLayoutEffect,useMemo,useRef,useState } from "react";
+import { CLUSTER_LIGHTNESS,GraphCanvasRenderer,type GraphRenderSettings } from "./graph-canvas.ts";
 
 const NODE_COLOR_TOKEN = "--primary";
 
@@ -1162,9 +1149,6 @@ export function GraphView({
 				}}
 			/>
 
-
-
-			<PluginGraphActions />
 
 			{ }
 			{

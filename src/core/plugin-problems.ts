@@ -1,13 +1,16 @@
-import type { Static, TSchema } from "typebox";
-import type { PluginCleanup } from "./plugins.ts";
+import type { Static,TSchema } from "typebox";
+import { copyImmutableData,ImmutableReadCache } from "./immutable-data.ts";
 import type { OwllyMessage } from "./native-messages.ts";
-import { preparePluginProblemSubmissionImages, type PluginProblemSubmissionImages } from "./plugin-submissions.ts";
 import {
-  clonePluginQuestionJson, freezePluginQuestionValue, preparePluginQuestionType, preparePluginQuestionSchema, createPluginQuestionParameters,
-  type JsonValue, type PluginQuestionEditorKey, type PluginQuestionOccurrence, type PluginQuestionValidationResult,
+clonePluginQuestionJson,
+createPluginQuestionParameters,
+freezePluginQuestionValue,
+preparePluginQuestionSchema,
+preparePluginQuestionType,
+type JsonValue,type PluginQuestionOccurrence,type PluginQuestionValidationResult,
 } from "./plugin-questions.ts";
-import { checkPluginSchema, preparePluginSchema } from "./plugin-validation.ts";
-import { copyImmutableData, ImmutableReadCache } from "./immutable-data.ts";
+import { preparePluginProblemSubmissionImages,type PluginProblemSubmissionImages } from "./plugin-submissions.ts";
+import { checkPluginSchema,preparePluginSchema } from "./plugin-validation.ts";
 import { practiceProblemInputSchema } from "./practice-problems.ts";
 
 export interface PluginProblemInput<Q = JsonValue> {
@@ -44,34 +47,6 @@ export interface PluginProblemTypeDefinition<Q extends TSchema = TSchema, S exte
   validateSubmission?: (context: PluginProblemSubmissionValidationContext<Static<Q>, Static<S>>) => undefined | string[];
   processSubmission?: (context: PluginProblemProcessingContext<Static<Q>, Static<S>>) => JsonValue | Promise<JsonValue>;
 }
-export type PluginProblemSubmissionState = { status: "empty" } | { status: "unready" | "ready"; value: JsonValue };
-export interface PluginProblemMountContext<Q = JsonValue> extends PluginProblemValidationContext<Q> {
-  readonly problemId: string;
-  readonly signal: AbortSignal;
-}
-export interface PluginProblemEditorProps<Q = JsonValue> extends PluginProblemMountContext<Q> {
-  readonly active: boolean;
-  readonly submission: PluginProblemSubmissionState;
-  onChange(submission: PluginProblemSubmissionState): void;
-}
-export interface PluginProblemEditorHandle {
-  update(props: { submission: PluginProblemSubmissionState; active: boolean }): void;
-  focus(): void;
-  handleKeyDown?(key: PluginQuestionEditorKey): "handled" | "pass";
-  appendTranscript?(text: string): void | Promise<void>;
-  dispose(): void;
-}
-export interface PluginProblemRenderer<Q = JsonValue, S = JsonValue> {
-  id: string;
-  supportedContractVersions: number[];
-  mountSubmissionEditor(container: HTMLElement, context: PluginProblemEditorProps<Q>): PluginProblemEditorHandle | Promise<PluginProblemEditorHandle>;
-  mountSubmitted?(container: HTMLElement, context: PluginProblemMountContext<Q> & {
-    readonly submission: S;
-    readonly processing?: PluginProblemProcessingOutcome;
-    readonly headerContainer?: HTMLElement;
-    readonly footerContainer?: HTMLElement;
-  }): void | PluginCleanup | Promise<void | PluginCleanup>;
-}
 export interface PluginProblemSnapshot {
   protocolVersion: 1;
   problemId: string;
@@ -97,12 +72,6 @@ export interface PluginProblemSubmission {
   processing?: PluginProblemProcessingOutcome;
   submittedAt: string;
 }
-
-export type NativePluginProblemDefinition = Omit<PluginProblemTypeDefinition, "validateProblem" | "validateSubmission" | "processSubmission"> & {
-  validateProblem?: (context: PluginProblemValidationContext<any>) => undefined | string[];
-  validateSubmission?: (context: PluginProblemSubmissionValidationContext<any, any>) => undefined | string[];
-  processSubmission?: (context: PluginProblemProcessingContext<any, any>) => JsonValue | Promise<JsonValue>;
-};
 function questionAdapter(definition: PluginProblemTypeDefinition) {
   return { id: definition.id, label: definition.label, contractVersion: definition.contractVersion,
     incompatibleContractVersions: definition.incompatibleContractVersions, showThinking: true,
@@ -185,18 +154,6 @@ function readProblemSnapshot(value: unknown): PluginProblemSnapshot | null {
       problemSchema: definition.problemSchema, submissionSchema: definition.submissionSchema,
       requiresSubmissionRefinement: copy.requiresSubmissionRefinement, requiresProcessing: copy.requiresProcessing });
   } catch { return null; }
-}
-export function validatePluginProblemSubmission(snapshot: PluginProblemSnapshot, context: { chatId: string; submission: unknown }, definition?: PluginProblemTypeDefinition): PluginQuestionValidationResult<JsonValue> {
-  try {
-    const saved = readPluginProblemSnapshot(snapshot);
-    if (!saved) return failed("Problem contract is unreadable.");
-    const submission = freezePluginQuestionValue(clonePluginQuestionJson(context.submission));
-    if (!checkPluginSchema(saved.submissionSchema, submission)) return failed("Submission does not satisfy the saved problem contract.");
-    if (saved.requiresSubmissionRefinement && (!definition || definition.id !== saved.typeId || definition.contractVersion !== saved.contractVersion || !definition.validateSubmission)) return failed("Required submission validation is unavailable.");
-    const errors = saved.requiresSubmissionRefinement ? refinement(definition!.validateSubmission as never,
-      { chatId: context.chatId, problemId: saved.problemId, contractVersion: saved.contractVersion, input: saved.input, submission }) : [];
-    return errors.length ? { ok: false, problems: errors } : { ok: true, value: submission };
-  } catch { return failed("Submission must be finite JSON satisfying its saved problem contract."); }
 }
 
 const submissions = new ImmutableReadCache<PluginProblemSubmission | null>();

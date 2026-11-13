@@ -1,9 +1,8 @@
-import type { Static, TSchema } from "typebox";
-import type { PluginCleanup } from "./plugins.ts";
-import { checkPluginSchema, preparePluginSchema } from "./plugin-validation.ts";
-import { copyImmutableData, ImmutableReadCache } from "./immutable-data.ts";
+import type { Static,TSchema } from "typebox";
 import { Format } from "typebox/format";
-import { validatePluginSubmissionImages, type PluginSubmissionImages } from "./plugin-submissions.ts";
+import { copyImmutableData,ImmutableReadCache } from "./immutable-data.ts";
+import { validatePluginSubmissionImages,type PluginSubmissionImages } from "./plugin-submissions.ts";
+import { checkPluginSchema,preparePluginSchema } from "./plugin-validation.ts";
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
 export type PluginQuestionVariant = "probe" | "teach";
@@ -38,35 +37,6 @@ export interface PluginQuestionTypeDefinition<Q extends TSchema = TSchema, A ext
 	validateQuestion?: (context: PluginQuestionValidationContext<Static<Q>>) => undefined | string[];
 	validateAnswer?: (context: PluginQuestionAnswerValidationContext<Static<Q>, Static<A>>) => undefined | string[];
 	gradeAnswer?: (context: PluginQuestionGradingContext<Static<Q>, Static<A>>) => JsonValue | Promise<JsonValue>;
-}
-export type PluginQuestionAnswerState = { status: "empty" } | { status: "unready" | "ready"; value: JsonValue };
-export interface PluginQuestionMountContext<Q = JsonValue> {
-	readonly input: PluginQuestionInput<Q>;
-	readonly chatId: string;
-	readonly questionId: string;
-	readonly contractVersion: number;
-	readonly variant: PluginQuestionVariant;
-	readonly signal: AbortSignal;
-}
-export interface PluginQuestionEditorProps<Q = JsonValue> extends PluginQuestionMountContext<Q> {
-	readonly active: boolean;
-	readonly answer: PluginQuestionAnswerState;
-	onChange(answer: PluginQuestionAnswerState): void;
-}
-export type PluginQuestionEditorKey = "Tab" | "Enter" | "Shift+Enter" | "Escape";
-export interface PluginQuestionEditorHandle {
-	update(props: { answer: PluginQuestionAnswerState; active: boolean }): void;
-	focus(): void;
-	handleKeyDown?(key: PluginQuestionEditorKey): "handled" | "pass";
-	appendTranscript?(text: string): void | Promise<void>;
-	dispose(): void;
-}
-export interface PluginQuestionRenderer<Q = JsonValue, A = JsonValue> {
-	id: string;
-	supportedContractVersions: number[];
-	mountQuestion?(container: HTMLElement, context: PluginQuestionMountContext<Q>): void | PluginCleanup | Promise<void | PluginCleanup>;
-	mountAnswerEditor(container: HTMLElement, context: PluginQuestionEditorProps<Q>): PluginQuestionEditorHandle | Promise<PluginQuestionEditorHandle>;
-	mountAnswered?(container: HTMLElement, context: PluginQuestionMountContext<Q> & { readonly answer: A; readonly grading?: PluginQuestionGradingOutcome; readonly headerContainer?: HTMLElement; readonly footerContainer?: HTMLElement }): void | PluginCleanup | Promise<void | PluginCleanup>;
 }
 export interface PluginQuestionOccurrence {
 	messageId: string;
@@ -127,12 +97,6 @@ export function preparePluginQuestionType<Q extends TSchema, A extends TSchema>(
 }
 export function createPluginQuestionParameters(definition: PluginQuestionTypeDefinition, variant: PluginQuestionVariant): TSchema {
 	return parametersFor(definition, variant);
-}
-export function validatePluginQuestionInput(definition: PluginQuestionTypeDefinition, context: { chatId: string; variant: PluginQuestionVariant; input: unknown }): PluginQuestionValidationResult<PluginQuestionInput> {
-	return validateInput(definition, context);
-}
-export function validatePluginQuestionAnswer(snapshot: PluginQuestionSnapshot, context: { chatId: string; answer: unknown }, definition?: PluginQuestionTypeDefinition): PluginQuestionValidationResult<JsonValue> {
-	return validateAnswer(snapshot, context, definition);
 }
 const annotations = new ImmutableReadCache<PluginQuestionAnnotationRead>();
 const boundAnnotations = new ImmutableReadCache<PluginQuestionAnnotationRead>();
@@ -383,18 +347,6 @@ function validateInput(definition: PluginQuestionTypeDefinition, context: { chat
 		const errors = refinement(definition.validateQuestion, { chatId: context.chatId, variant: context.variant, contractVersion: definition.contractVersion, input: accepted });
 		return errors.length ? { ok: false, problems: errors } : { ok: true, value: accepted };
 	} catch { return problems("Question must be finite JSON satisfying its input contract."); }
-}
-function validateAnswer(snapshot: PluginQuestionSnapshot, context: { chatId: string; answer: unknown }, definition?: PluginQuestionTypeDefinition): PluginQuestionValidationResult<JsonValue> {
-	try {
-		const saved = readPluginQuestionSnapshot(snapshot);
-		if (!saved) return problems("Question contract is unreadable.");
-		const answer = clonePluginQuestionJson(context.answer);
-		if (!schemaAccepts(saved.answerSchema, answer)) return problems("Answer does not satisfy the saved answer contract.");
-		if (saved.requiresAnswerRefinement && (!definition || definition.id !== saved.typeId || definition.contractVersion !== saved.contractVersion || !definition.validateAnswer)) return problems("The required question validation implementation is unavailable.");
-		const accepted = freezePluginQuestionValue(answer);
-		const errors = saved.requiresAnswerRefinement ? refinement(definition!.validateAnswer, { chatId: context.chatId, questionId: saved.questionId, variant: saved.variant, contractVersion: saved.contractVersion, input: saved.input, answer: accepted }) : [];
-		return errors.length ? { ok: false, problems: errors } : { ok: true, value: accepted };
-	} catch { return problems("Answer must be finite JSON satisfying its saved contract."); }
 }
 
 function occurrenceOf(value: unknown): PluginQuestionOccurrence | null {

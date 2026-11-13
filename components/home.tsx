@@ -2,28 +2,26 @@
 
 import { useAttachmentUploads } from "@/components/file-path-drop-zone";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { SurfaceRegion, usePageSurfaceBoundary, useSurfaceChromeStyle } from "./plugin-surfaces";
-import { ArrowUpIcon } from "@/components/ui/icons";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { MinimalHome } from "@/components/minimal-home";
-import { SetupDialog } from "@/components/setup-dialog";
-import { ComposerActions, NodePickerControl } from "@/components/composer-actions";
-import { useModelSetup, selectedModelUnavailable, openModelPicker, ZeroKeysPill } from "@/components/setup-cta";
-import { DictationBar, joinDictation, useDictation } from "@/components/dictation";
+import { AttachFilesButton } from "@/components/attach-files-button";
+import { ComposerActions,NodePickerControl } from "@/components/composer-actions";
 import { useFieldCycle } from "@/components/field-cycle";
-import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
-import { SidebarToggle } from "@/components/sidebar";
-import { SessionModeCards } from "@/components/session-mode-cards";
-import { StatsBar } from "@/components/stats-bar";
+import { MinimalHome } from "@/components/minimal-home";
 import { OPENING_PROMPT_FAILURE } from "@/components/opening-prompt";
 import { PathInput } from "@/components/path-input";
-import { AttachFilesButton } from "@/components/attach-files-button";
+import { SessionModeCards } from "@/components/session-mode-cards";
+import { openModelPicker,selectedModelUnavailable,useModelSetup,ZeroKeysPill } from "@/components/setup-cta";
+import { SetupDialog } from "@/components/setup-dialog";
+import { SidebarToggle } from "@/components/sidebar";
 import { SessionStarter } from "@/components/start-session";
+import { StatsBar } from "@/components/stats-bar";
+import { buttonVariants } from "@/components/ui/button";
+import { ArrowUpIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 import type { TurnUsage } from "@/src/core";
+import { usePathname,useRouter } from "next/navigation";
+import { useCallback,useMemo,useRef,useState } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
+import { useOptionalInteractionLayers } from "./interaction-layers";
 
 export function Home({
 	initialConfigured,
@@ -35,19 +33,12 @@ export function Home({
 	const router = useRouter();
 	const pathname = usePathname();
 	const bodyRef = useRef<HTMLDivElement>(null);
-	const surfaceTarget = usePageSurfaceBoundary({ active: pathname === "/", viewKey: "/", bodyRef });
-	const chromeStyle = useSurfaceChromeStyle(surfaceTarget);
+
+
 	const [topic, setTopic] = useState("");
 	const topicRef = useRef("");
 	const { catalog, configured, zeroKeys } = useModelSetup(initialConfigured);
 	const [setupOpen, setSetupOpen] = useState(false);
-	const dictation = useDictation({
-		append: (t) => {
-			const v = joinDictation(topicRef.current, t);
-			topicRef.current = v;
-			setTopic(v);
-		},
-	});
 	const [busy, setBusy] = useState(false);
 	const startingRef = useRef(false);
 	const starterRef = useRef(new SessionStarter());
@@ -58,30 +49,12 @@ export function Home({
 		[],
 	);
 	useFieldCycle(cycleTopicField);
-	const dictationWasActiveRef = useRef(false);
-	useEffect(() => {
-		if (dictation.active) {
-			dictationWasActiveRef.current = true;
-		} else if (dictationWasActiveRef.current) {
-			dictationWasActiveRef.current = false;
-			if (isInteractionScopeEligible(topicInputRef.current, controller)) topicInputRef.current!.focus();
-		}
-	}, [dictation.active, controller]);
-
 	const [mode, setMode] = useState<"teach" | "practice">("teach");
 	const [practiceProps, setPracticeProps] = useState<{ id: string; name: string; statement: string }[]>([]);
 	const [chainSelectOpen, setChainSelectOpen] = useState(false);
 	const pickedIds = useMemo(() => new Set(practiceProps.map((p) => p.id)), [practiceProps]);
 
-	const start = () => {
-		if (attachments.isUploading()) return;
-		if (!dictation.active) {
-			void begin();
-			return;
-		}
-		void dictation.finish().then(() => begin());
-	};
-	const begin = async () => {
+	const start = async () => {
 		if (attachments.isUploading()) return;
 		const t = topicRef.current.trim();
 		if (!t || startingRef.current) return;
@@ -183,13 +156,6 @@ export function Home({
 						defaultDropTarget
 						onKeyDown={(e) => {
 							if (!isInteractionScopeEligible(e.currentTarget, controller)) return;
-							if (e.key === "Escape" && dictation.active) {
-								controller?.claimEscape(e);
-								e.preventDefault();
-								e.stopPropagation();
-								dictation.cancel();
-								return;
-							}
 							if (e.key === "Enter" && !e.shiftKey) {
 								e.preventDefault();
 								void start();
@@ -200,13 +166,12 @@ export function Home({
 						className="field-sizing-content ow-input max-h-48 min-h-11 flex-1 resize-none bg-transparent px-3 py-2.5 font-semibold outline-none placeholder:font-medium placeholder:text-muted-foreground"
 					/>
 					<AttachFilesButton editorRef={topicInputRef} />
-					<DictationBar dictation={dictation} iconOnly />
 					{
 }
 					<button
 						type="submit"
 						aria-label="Start session"
-						disabled={attachments.uploading || (!topic.trim() && !dictation.active) || busy}
+						disabled={attachments.uploading || !topic.trim() || busy}
 						className={cn(buttonVariants({ size: "icon-lg" }), "size-11 rounded-2xl")}
 					>
 						<ArrowUpIcon className="size-5" strokeWidth={3} />
@@ -219,11 +184,11 @@ export function Home({
 				</div>
 			</div>
 
-			<SurfaceRegion target={surfaceTarget} />
+
 			</div>
 			{
 }
-			<header style={chromeStyle} className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2">
+			<header className="pointer-events-none absolute inset-x-0 top-0 flex items-center gap-2 px-3 py-2">
 				<div className="pointer-events-auto">
 					<SidebarToggle />
 				</div>

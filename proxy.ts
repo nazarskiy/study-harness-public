@@ -13,5 +13,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ["/api", "/api/((?!plugins/[^/]+/documents/markdown/?$).*)"],
+	matcher: ["/api/:path*"],
 };

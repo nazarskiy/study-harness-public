@@ -1,16 +1,15 @@
-import type { Metadata } from "next";
-import { JetBrains_Mono, Nunito } from "next/font/google";
-import Script from "next/script";
-import { connection } from "next/server";
-import "katex/dist/katex.min.css";
-import "./globals.css";
-import { AppShell, SidebarProvider } from "@/components/sidebar";
 import { ActivityProvider } from "@/components/activity-dock";
 import { ServerEventsProvider } from "@/components/server-events";
 import { AppearanceProvider } from "@/components/settings/appearance";
-import { PluginsProvider } from "@/components/plugins";
-import { readAppearanceBoot } from "@/src/server";
+import { AppShell,SidebarProvider } from "@/components/sidebar";
 import { FACTORY_SETTINGS } from "@/src/core";
+import { readAppearanceBoot } from "@/src/server";
+import "katex/dist/katex.min.css";
+import type { Metadata } from "next";
+import { JetBrains_Mono,Nunito } from "next/font/google";
+import Script from "next/script";
+import { connection } from "next/server";
+import "./globals.css";
 
 const nunito = Nunito({ subsets: ["latin"], variable: "--font-nunito" });
 const code = JetBrains_Mono({ subsets: ["latin"], variable: "--font-code" });
@@ -38,7 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 			<body className="min-h-dvh antialiased">
 				<Script id="owlly-theme" strategy="beforeInteractive">{THEME_SCRIPT}</Script>
 				<ServerEventsProvider>
-					<PluginsProvider>
+
 						<AppearanceProvider initialAppearance={appearance}>
 							<SidebarProvider>
 								<ActivityProvider>
@@ -46,7 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 								</ActivityProvider>
 							</SidebarProvider>
 						</AppearanceProvider>
-					</PluginsProvider>
+
 				</ServerEventsProvider>
 			</body>
 		</html>

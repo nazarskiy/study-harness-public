@@ -1,25 +1,22 @@
 "use client";
 
 
-import { useEffect, useId, useRef, useState } from "react";
 import { HostDialog } from "@/components/host-dialog";
+import { hasLegacyInteractionForeground } from "@/components/interaction-focus";
 import { useOptionalInteractionLayers } from "@/components/interaction-layers";
-import { useRouter } from "next/navigation";
-import {
-	actionForBinding,
-	bindingForAction,
-	eventBinding,
-	formatBinding,
-	isTypingSurface,
-	kbdEventForAction,
-	KEYBOARD_ACTIONS,
-} from "@/src/core";
-import { pluginQuestionKeySuppressed, composingQuestionKey } from "./plugin-question-keys";
-import { isDictationActive } from "@/components/dictation";
-import { dispatchFocusedPluginShortcut, hasLegacyInteractionForeground, isInteractionScopeEligible } from "@/components/plugin-input-focus";
 import { useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
-import { usePlugins } from "./plugins";
-import { dispatchPluginActionShortcut, pluginShortcutScopeLabel, usePluginShortcutRows } from "./plugin-shortcuts";
+import {
+actionForBinding,
+bindingForAction,
+eventBinding,
+formatBinding,
+isTypingSurface,
+kbdEventForAction,
+KEYBOARD_ACTIONS,
+} from "@/src/core";
+import { useRouter } from "next/navigation";
+import { useEffect,useId,useRef,useState } from "react";
+import { composingQuestionKey } from "./input-keys";
 
 export { kbdEventForAction };
 
@@ -28,7 +25,6 @@ export function KeyboardShortcuts() {
 	const [cheatOpen, setCheatOpen] = useState(false);
 	const { open: openSettings } = useSettingsDialog();
 	const controller = useOptionalInteractionLayers();
-	const { manager } = usePlugins();
 
 	const handlersRef = useRef<{
 		router: ReturnType<typeof useRouter>;
@@ -39,12 +35,11 @@ export function KeyboardShortcuts() {
 
 	useEffect(() => {
 		const onKeyDown = (e: KeyboardEvent) => {
-			if (pluginQuestionKeySuppressed(e) || composingQuestionKey(e)) return;
+			if (composingQuestionKey(e)) return;
 			if (e.key === "Tab") {
 				if (!controller) e.preventDefault();
 				if (e.shiftKey) {
-					if (!dispatchFocusedPluginShortcut("cycle-thinking", controller))
-						window.dispatchEvent(new CustomEvent("owlly:kbd-cycle-thinking"));
+					window.dispatchEvent(new CustomEvent("owlly:kbd-cycle-thinking"));
 				}
 				else if (!e.metaKey && !e.ctrlKey && !e.altKey)
 					window.dispatchEvent(new CustomEvent("owlly:kbd-cycle-fields"));
@@ -53,18 +48,13 @@ export function KeyboardShortcuts() {
 
 			if (e.key === "Escape") {
 				if (e.defaultPrevented || (controller ? controller.isEscapeOwned(e) : hasLegacyInteractionForeground(document))) return;
-				if (isDictationActive()) {
-					e.preventDefault();
-					window.dispatchEvent(new CustomEvent("owlly:kbd-cancel-dictation"));
-					return;
-				}
 				window.dispatchEvent(new CustomEvent("owlly:kbd-abort-turn"));
 				return;
 			}
 
 			if (e.defaultPrevented) return;
 			const action = actionForBinding(eventBinding(e));
-			if (!action) { dispatchPluginActionShortcut(e, manager, controller); return; }
+			if (!action) return;
 
 			if (isTypingSurface(e) && !(e.metaKey || e.ctrlKey || e.altKey)) return;
 
@@ -90,21 +80,18 @@ export function KeyboardShortcuts() {
 					window.dispatchEvent(new CustomEvent(kbdEventForAction(action)));
 					break;
 				default:
-					if (dispatchFocusedPluginShortcut(action, controller)) break;
-					if (action === "toggle-dictation" && !isInteractionScopeEligible(document.body, controller)) break;
 					window.dispatchEvent(new CustomEvent(kbdEventForAction(action)));
 			}
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [controller, manager]);
+	}, [controller]);
 
 	return <CheatSheet open={cheatOpen} onClose={() => setCheatOpen(false)} />;
 }
 
 function CheatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 	const headingId = useId();
-	const { rows: pluginRows } = usePluginShortcutRows();
 	const scopes = ["global", "chat", "graph"] as const;
 	const scopeLabels: Record<(typeof scopes)[number], string> = {
 		global: "Global",
@@ -147,13 +134,7 @@ function CheatSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
 						</div>
 					);
 				})}
-				{[...new Set(pluginRows.map(row => row.pluginId))].map(pluginId => <div key={pluginId} className="mb-4" data-testid={`kbd-cheat-plugin-${pluginId}`}>
-					<div className="mb-1.5 text-xs font-extrabold text-muted-foreground/70">{pluginRows.find(row => row.pluginId === pluginId)!.pluginName}</div>
-					{pluginRows.filter(row => row.pluginId === pluginId).map(row => <div key={row.id} className="mb-1 text-sm">
-						<div className="flex items-center justify-between gap-4"><span className="text-muted-foreground">{row.name}</span><kbd className="rounded-lg border-2 border-b-4 border-border bg-card px-2 py-0.5 text-xs font-extrabold text-card-foreground">{row.binding ? formatBinding(row.binding) : "Unbound"}</kbd></div>
-						<div className="text-xs text-muted-foreground/70">{pluginShortcutScopeLabel(row)}{row.reason ? ` · Inactive: ${row.reason}` : ""}</div>
-					</div>)}
-				</div>)}
+
 		</HostDialog>
 	);
 }

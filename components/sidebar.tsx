@@ -1,31 +1,27 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { MenuShell } from "@/components/menu-shell";
-import { DeleteSessionDialog } from "@/components/delete-session-dialog";
-import type { ChatDeleteMode } from "@/src/core";
-import { DumbbellIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, BookOpenIcon, TrophyIcon, WaypointsIcon, SearchIcon, SettingsIcon } from "@/components/ui/icons";
 import { ActivitySection } from "@/components/activity-dock";
+import { DeleteSessionDialog } from "@/components/delete-session-dialog";
 import { CoverageMenuBlock } from "@/components/extraction-coverage";
+import { HostContentRootContext,HostRouteLifetimeProvider } from "@/components/host-content-root";
+import { isInteractionScopeEligible } from "@/components/interaction-focus";
+import { InteractionLayersProvider,useInteractionLayers,useOptionalInteractionLayers } from "@/components/interaction-layers";
+import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
+import { MenuShell } from "@/components/menu-shell";
 import { Owl } from "@/components/owl/owl";
 import { OwlBusy } from "@/components/owl/owl-busy";
-import { KeyboardShortcuts } from "@/components/keyboard-shortcuts";
-import { SettingsDialogProvider, useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
+import { useServerEvent,useServerResync } from "@/components/server-events";
+import { SettingsDialogProvider,useSettingsDialog } from "@/components/settings/settings-dialog.tsx";
+import { Button,buttonVariants } from "@/components/ui/button";
 import { Hint } from "@/components/ui/hint";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { BookOpenIcon,DumbbellIcon,PanelLeftCloseIcon,PanelLeftOpenIcon,SearchIcon,SettingsIcon,TrophyIcon,WaypointsIcon } from "@/components/ui/icons";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { fuzzyScore } from "@/src/core";
-import { useServerEvent, useServerResync } from "@/components/server-events";
-import type { ChatListItem } from "@/src/core";
-import { kbdEventForAction } from "@/src/core";
-import { PluginWidgets } from "@/components/plugins";
-import { PluginSidebarActions } from "@/components/plugin-chrome";
-import { HostContentRootContext, HostRouteLifetimeProvider } from "@/components/host-content-root";
-import { isInteractionScopeEligible } from "@/components/plugin-input-focus";
-import { InteractionLayersProvider, useInteractionLayers, useOptionalInteractionLayers } from "@/components/interaction-layers";
+import type { ChatDeleteMode,ChatListItem } from "@/src/core";
+import { fuzzyScore,kbdEventForAction } from "@/src/core";
+import Link from "next/link";
+import { usePathname,useRouter,useSearchParams } from "next/navigation";
+import { createContext,useCallback,useContext,useEffect,useMemo,useRef,useState } from "react";
 
 
 const STORAGE_KEY = "owlly:sidebar-open";
@@ -440,7 +436,7 @@ function SessionsSidebar() {
 				</div>
 
 				{ }
-				<PluginSidebarActions>
+				<>
 					<button
 						type="button"
 						data-testid="new-session"
@@ -474,7 +470,7 @@ function SessionsSidebar() {
 						<WaypointsIcon className="size-5 shrink-0" />
 						<span className="min-w-0 text-left font-extrabold">Knowledge map</span>
 					</Link>
-				</PluginSidebarActions>
+				</>
 
 				<div className="mx-4 mb-2 mt-3 flex items-center justify-between">
 					<span className="text-sm font-extrabold text-muted-foreground">Sessions</span>
@@ -686,7 +682,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 				{
 }
 				<KeyboardShortcuts />
-				<PluginWidgets />
+
 			</SettingsDialogProvider></InteractionLayersProvider>
 		</HostContentRootContext.Provider>
 		</HostRouteLifetimeProvider>

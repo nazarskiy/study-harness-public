@@ -6,7 +6,6 @@ import { CLAUDE_CODE_PROVIDER } from "./contracts/claude-code.ts";
 import type { ModelRole } from "../../config.ts";
 import type { ChatSettings } from "./contracts/chat.ts";
 import { isSearchEngineId, type SearchEngineId } from "./search.ts";
-import { isDictationLanguage, type DictationLanguage } from "./dictation.ts";
 import { parseFileAccessSettings, type FileAccessSettings } from "./file-access.ts";
 import { DEFAULT_THEME_PREFERENCE, isThemePreference, type ThemePreference } from "./themes.ts";
 
@@ -187,10 +186,6 @@ export interface GeneralSettings {
 	autoUpdate?: boolean;
 }
 
-export interface DictationSettings {
-	language?: DictationLanguage;
-}
-
 export interface AgentSettings {
 	workerRequestConcurrency?: number;
 	models?: Partial<Record<BackgroundModelRole, RoleModelOverride>>;
@@ -219,7 +214,6 @@ export interface CompactionSettings {
 export interface UserSettings {
 	version: number;
 	general?: GeneralSettings;
-	dictation?: DictationSettings;
 	claudeCode?: { enabled?: boolean };
 	agent?: AgentSettings;
 	models?: ModelsSettings;
@@ -234,7 +228,6 @@ export interface FactorySettings {
 	version: number;
 	agent: Required<Pick<AgentSettings, "workerRequestConcurrency">>;
 	general: Required<GeneralSettings>;
-	dictation: Required<DictationSettings>;
 	appearance: {
 		mode: ThemePreference;
 		proseFontSize: number;
@@ -247,7 +240,6 @@ export const FACTORY_SETTINGS: FactorySettings = {
 	version: CURRENT_SETTINGS_VERSION,
 	agent: { workerRequestConcurrency: 8 },
 	general: { autoUpdate: true },
-	dictation: { language: "en" },
 	appearance: {
 		mode: DEFAULT_THEME_PREFERENCE,
 		proseFontSize: 17,
@@ -471,13 +463,6 @@ export function sanitizeUserSettings(raw: unknown): UserSettings | null {
 	};
 	if (r.general !== null && typeof r.general === "object" && !Array.isArray(r.general)) {
 		out.general = sanitizeGeneral(r.general as Record<string, unknown>);
-	}
-	if (r.dictation !== undefined) {
-		const raw = r.dictation;
-		out.dictation = raw !== null && typeof raw === "object" && !Array.isArray(raw) &&
-			isDictationLanguage((raw as Record<string, unknown>).language)
-			? { language: (raw as DictationSettings).language }
-			: {};
 	}
 	if (r.claudeCode !== undefined) {
 		const raw = r.claudeCode;

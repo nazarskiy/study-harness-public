@@ -1,7 +1,6 @@
-import { Compile } from "typebox/compile";
 import type { TSchema } from "typebox";
-import type { PluginInferenceOptions } from "./plugins.ts";
-import { copyImmutableData, ImmutableReadCache } from "./immutable-data.ts";
+import { Compile } from "typebox/compile";
+import { copyImmutableData,ImmutableReadCache } from "./immutable-data.ts";
 
 const types = new Set([
 	"object", "array", "boolean", "integer", "number", "null", "string",
@@ -73,32 +72,3 @@ function preparedCheck(schema: unknown): (value: unknown) => boolean {
 }
 export function preparePluginSchema(schema: unknown): void { preparedCheck(schema); }
 export function checkPluginSchema(schema: unknown, value: unknown): boolean { return preparedCheck(schema)(value); }
-
-const levels = ["off", "minimal", "low", "medium", "high", "xhigh", "max"];
-const optionKeys = new Set(["temperature", "maxTokens", "cacheRetention", "reasoning", "thinkingBudgets", "toolChoice", "timeoutMs", "maxRetries", "maxRetryDelayMs", "metadata"]);
-export function validatePluginInferenceOptions(value: PluginInferenceOptions | undefined): PluginInferenceOptions {
-	if (value === undefined) return {};
-	if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid inference options");
-	for (const key of Reflect.ownKeys(value)) if (typeof key !== "string" || !optionKeys.has(key)) throw new Error(`Unsupported plugin inference option: ${String(key)}`);
-	const options = structuredClone(value);
-	for (const key of ["temperature", "maxTokens", "timeoutMs", "maxRetries", "maxRetryDelayMs"] as const) {
-		const n = options[key];
-		if (n === undefined) continue;
-		if (typeof n !== "number" || !Number.isFinite(n) || n < 0 || (key !== "temperature" && !Number.isSafeInteger(n)) || ((key === "maxTokens" || key === "timeoutMs") && n === 0)) throw new Error(`Invalid inference option: ${key}`);
-	}
-	if (options.reasoning !== undefined && !levels.filter((l) => l !== "off").includes(options.reasoning)) throw new Error("Invalid inference option: reasoning");
-	if (options.cacheRetention !== undefined && !["none", "short", "long"].includes(options.cacheRetention)) throw new Error("Invalid inference option: cacheRetention");
-	if (options.toolChoice !== undefined && !["auto", "none"].includes(options.toolChoice)) throw new Error("Invalid inference option: toolChoice");
-	if (options.thinkingBudgets !== undefined) {
-		if (!options.thinkingBudgets || typeof options.thinkingBudgets !== "object" || Array.isArray(options.thinkingBudgets)) throw new Error("Invalid thinkingBudgets");
-		for (const [key, n] of Object.entries(options.thinkingBudgets)) if (!["minimal", "low", "medium", "high"].includes(key) || typeof n !== "number" || !Number.isSafeInteger(n) || n < 0) throw new Error(`Invalid thinking budget: ${key}`);
-	}
-	if (options.metadata !== undefined) {
-		if (!options.metadata || typeof options.metadata !== "object" || Array.isArray(options.metadata)) throw new Error("Invalid inference metadata");
-		JSON.stringify(options.metadata, (_key, item) => {
-			if (typeof item === "function" || typeof item === "symbol" || typeof item === "bigint" || (typeof item === "number" && !Number.isFinite(item))) throw new Error("Metadata must be JSON compatible");
-			return item;
-		});
-	}
-	return options;
-}

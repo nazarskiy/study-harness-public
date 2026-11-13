@@ -1,11 +1,11 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import { ArrowUpRight, Pencil, Quote } from "@/components/ui/icons";
-import { MenuShell } from "./menu-shell";
-import { citationLabel, type TutorCitation } from "@/src/core";
+import { ArrowUpRight,Pencil,Quote } from "@/components/ui/icons";
+import { citationLabel,type TutorCitation } from "@/src/core";
+import { createContext,useContext,useEffect,useRef,useState } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
+import { MenuShell } from "./menu-shell";
 
 export type ComposerCitationSource = { start: number; end: number; link: string; host: HTMLElement };
 

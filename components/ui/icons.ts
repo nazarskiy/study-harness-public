@@ -43,8 +43,6 @@ export {
 	IconMaximize as MaximizeIcon,
 	IconMessageCircleQuestion as MessageCircleQuestion,
 	IconMessageCircleQuestion as MessageCircleQuestionIcon,
-	IconMicrophone as Mic,
-	IconMicrophone as MicIcon,
 	IconMinus as MinusIcon,
 	IconDeviceDesktop as MonitorIcon,
 	IconMoon as MoonIcon,

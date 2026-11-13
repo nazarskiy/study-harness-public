@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { isInteractionScopeEligible } from "./plugin-input-focus";
+import { useEffect,useLayoutEffect,useRef,type RefObject } from "react";
+import { isInteractionScopeEligible } from "./interaction-focus";
 import { useOptionalInteractionLayers } from "./interaction-layers";
 
 import { navigateTreeRows as navigateChainRows } from "./tree-navigation";
-export { navigateChainRows };
 export type { TreeNavigationRow as ChainNavigationRow } from "./tree-navigation";
+export { navigateChainRows };
 export function chainRow(parts: string[], depth: number, expanded?: boolean) {
 	return { "data-chain-nav-row": JSON.stringify(parts), "data-chain-nav-depth": depth,
 		"data-chain-nav-expanded": expanded, tabIndex: -1 };

@@ -1,11 +1,11 @@
-import type { AgentMessage, AgentTool, AgentTurnContext } from "@earendil-works/pi-agent-core";
+import type { AgentMessage,AgentTool,AgentTurnContext } from "@earendil-works/pi-agent-core";
+import { countDemoQuestions,DEMO_QUESTION_LIMIT,demoModeInstructions } from "../core/demo-mode.ts";
 import { QUESTION_TOOLS } from "../core/pending.ts";
-import { countDemoQuestions, DEMO_QUESTION_LIMIT, demoModeInstructions } from "../core/demo-mode.ts";
 
-export function createDemoQuestionGuard(messages: readonly AgentMessage[], customQuestionNames: readonly string[] = []) {
+export function createDemoQuestionGuard(messages: readonly AgentMessage[]) {
 	let asked = countDemoQuestions(messages);
 	let reserved = 0;
-	const questions = new Set<string>([...QUESTION_TOOLS, ...customQuestionNames]);
+	const questions = new Set<string>(QUESTION_TOOLS);
 	const posed = new Set<string>();
 	const availableTools = (tools: readonly AgentTool<any, any>[]) => asked >= DEMO_QUESTION_LIMIT ? tools.filter(tool => !questions.has(tool.name)) : [...tools];
 	return {

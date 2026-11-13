@@ -1,15 +1,15 @@
+import type { AgentMessage,AgentTool } from "@earendil-works/pi-agent-core";
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { Type } from "typebox";
-import type { AgentMessage, AgentTool } from "@earendil-works/pi-agent-core";
-import { countDemoQuestions, DEMO_QUESTION_LIMIT, demoModeEnabled } from "../src/core/demo-mode.ts";
-import { readPluginQuestionMessageAnnotation } from "../src/core/plugin-questions.ts";
 import { createDemoQuestionGuard } from "../src/agent/demo-mode.ts";
-import { createTeacherAgent, createProberAgent, createPracticeAgent } from "../src/agent/teacher-agent.ts";
-import { questionResult, invalidInputResult } from "../src/agent/tool-execute.ts";
 import type { PiEngine } from "../src/agent/models.ts";
-import type { ChatStore } from "../src/core/ports.ts";
+import { createPracticeAgent,createProberAgent,createTeacherAgent } from "../src/agent/teacher-agent.ts";
+import { invalidInputResult,questionResult } from "../src/agent/tool-execute.ts";
 import type { PlanTree } from "../src/core/contracts.ts";
+import { countDemoQuestions,DEMO_QUESTION_LIMIT,demoModeEnabled } from "../src/core/demo-mode.ts";
+import { readPluginQuestionMessageAnnotation } from "../src/core/plugin-questions.ts";
+import type { ChatStore } from "../src/core/ports.ts";
 
 const quiz = { question: "2 + 2?", options: [{ label: "4", value: "four" }, { label: "5", value: "five" }], correctAnswer: "four", explanation: "Addition" };
 const usage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0, cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };
@@ -46,13 +46,13 @@ test("counts saved probing history, including clarification, custom questions an
 	assert.equal(countDemoQuestions([legacy]), 1);
 });
 
-test("hard cap covers mixed built-in/custom questions and hides them when reached", async () => {
+test("hard cap covers built-in probing questions and hides them when reached", async () => {
 	let executions = 0;
-	const tools = [tool("probe", async () => { executions++; return questionResult(); }), tool("quiz"), tool("plugin_question"), tool("read"), tool("probe_done")];
-	const guard = createDemoQuestionGuard([question("one"), question("two")], ["plugin_question"]);
+	const tools = [tool("probe", async () => { executions++; return questionResult(); }), tool("quiz"), tool("read"), tool("probe_done")];
+	const guard = createDemoQuestionGuard([question("one"), question("two")]);
 	const wrapped = guard.wrapTools(tools);
 	await wrapped.find(item => item.name === "probe")!.execute("third", {});
-	await wrapped.find(item => item.name === "plugin_question")!.execute("fourth", {});
+	await wrapped.find(item => item.name === "quiz")!.execute("fourth", {});
 	const refused = await wrapped.find(item => item.name === "probe")!.execute("fifth", {});
 	assert.equal(refused.isError, true); assert.equal(executions, 1); assert.equal(guard.count(), 4);
 	assert.deepEqual(guard.availableTools(wrapped).map(item => item.name), ["read", "probe_done"]);

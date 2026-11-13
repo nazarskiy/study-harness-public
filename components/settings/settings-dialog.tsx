@@ -1,41 +1,41 @@
 "use client";
 
-import {
-	createContext,
-	useCallback,
-	useContext,
-	useEffect,
-	useId,
-	useRef,
-	useState,
-	type ReactElement,
-	type ReactNode,
-	type RefObject,
-} from "react";
-import { BotIcon, KeyIcon, PaletteIcon, WaypointsIcon, type AppIcon, XIcon } from "@/components/ui/icons";
+import "./settings.css";
+
 import { HostDialog } from "@/components/host-dialog";
-import { useInteractionLayers, type CloseOutcome } from "@/components/interaction-layers";
-import {
-	CURRENT_SETTINGS_VERSION,
-	type AgentSettings,
-	type AppearanceSettings,
-	type CompactionSettings,
-	type GraphSettings,
-	type UserSettings,
-} from "@/src/core";
-import { useAppearance } from "./appearance.tsx";
+import { useInteractionLayers,type CloseOutcome } from "@/components/interaction-layers";
+import { MENU_CLOSE_EVENT,MENU_OPEN_EVENT } from "@/components/menu-shell";
 import { Owl } from "@/components/owl/owl";
-import { SettingsSection } from "./controls.tsx";
-import { AgentSection } from "./agent-section.tsx";
-import type { ModelsSettings } from "@/src/core";
-import { MENU_CLOSE_EVENT, MENU_OPEN_EVENT } from "@/components/menu-shell";
 import { notifySettingsSaved } from "@/components/settings-signal";
-import { KeysSection } from "./keys-section.tsx";
 import { Hint } from "@/components/ui/hint";
-import { AppearanceSection, GraphSection } from "./appearance-section.tsx";
-import { PluginSettingsPage } from "./plugin-settings-page.tsx";
-import { usePlugins } from "@/components/plugins";
+import { BotIcon,KeyIcon,PaletteIcon,WaypointsIcon,XIcon,type AppIcon } from "@/components/ui/icons";
+import type { ModelsSettings } from "@/src/core";
+import {
+CURRENT_SETTINGS_VERSION,
+type AgentSettings,
+type AppearanceSettings,
+type CompactionSettings,
+type GraphSettings,
+type UserSettings,
+} from "@/src/core";
+import {
+createContext,
+useCallback,
+useContext,
+useEffect,
+useId,
+useRef,
+useState,
+type ReactElement,
+type ReactNode,
+type RefObject,
+} from "react";
+import { AgentSection } from "./agent-section.tsx";
+import { AppearanceSection,GraphSection } from "./appearance-section.tsx";
+import { useAppearance } from "./appearance.tsx";
 import { ChatGPTUIProvider } from "./chatgpt-connection.tsx";
+import { SettingsSection } from "./controls.tsx";
+import { KeysSection } from "./keys-section.tsx";
 import { NativeSubscriptionUIProvider } from "./subscription-connections.tsx";
 
 const SECTIONS = [
@@ -44,7 +44,7 @@ const SECTIONS = [
 	{ id: "appearance", label: "Appearance", icon: PaletteIcon },
 	{ id: "graph", label: "Knowledge map", icon: WaypointsIcon },
 ] as const;
-type SectionId = (typeof SECTIONS)[number]["id"] | `plugin:${string}`;
+type SectionId = (typeof SECTIONS)[number]["id"];
 
 const DialogContext = createContext<{ open: (section?: string, row?: string) => void }>({ open: () => {} });
 interface SettingsWriteOrder {
@@ -72,19 +72,12 @@ export function SettingsDialogProvider({
 		if (interactions.getLayer(layerId) && interactions.popTo(layerId) !== "closed") return;
 		interactions.invalidateOpening();
 		setNavigationRequest(request => request + 1);
-		setLandOn(section && (SECTIONS.some(item => item.id === section) || section.startsWith("plugin:")) ? section as SectionId : "keys");
+		setLandOn(section && (SECTIONS.some(item => item.id === section)) ? section as SectionId : "keys");
 		setLandOnRow(row ?? null);
 		setShow(true);
 	}, [interactions, layerId]);
 	const close = useCallback((): CloseOutcome => { setShow(false); return "closed"; }, []);
-	useEffect(() => {
-		const onPluginSettings = (event: Event) => {
-			const pluginId: unknown = (event as CustomEvent<unknown>).detail;
-			if (typeof pluginId === "string") open(`plugin:${pluginId}`);
-		};
-		window.addEventListener("owlly:open-plugin-settings", onPluginSettings);
-		return () => window.removeEventListener("owlly:open-plugin-settings", onPluginSettings);
-	}, [open]);
+
 	return (
 		<ChatGPTUIProvider><NativeSubscriptionUIProvider><WriteOrderContext.Provider value={writeOrder}><DialogContext.Provider value={{ open }}>
 			{children}
@@ -117,7 +110,7 @@ function SettingsDialog({
 		renderFrame={frame => <HostDialog open layerId={layerId} ownerId={null}
 			onClose={onClose} frame={frame} aria-label="Settings"
 			backdropProps={{
-				className: "fixed inset-0 z-50 flex items-center justify-center bg-black/45",
+				className: "settings-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/45",
 				"data-testid": "settings-backdrop",
 			}}>{frame.props.children}</HostDialog>} />;
 }
@@ -139,7 +132,6 @@ export function SettingsDialogBody({
 	const inheritedWriteOrder = useContext(WriteOrderContext);
 	const standaloneWriteOrder = useRef<SettingsWriteOrder>({ issued: 0, acknowledged: 0, listeners: new Set() });
 	const writeOrder = inheritedWriteOrder ?? standaloneWriteOrder;
-	const { snapshot } = usePlugins();
 	const [record, setRecord] = useState<UserSettings | null | undefined>(
 		undefined,
 	);
@@ -174,18 +166,8 @@ export function SettingsDialogBody({
 		setActive(initialSection);
 	}, [initialSection, navigationRequest]);
 
-	const enabledPlugins = snapshot.plugins.filter(plugin => plugin.info.enabled);
-	const activePluginId = active.startsWith("plugin:") ? active.slice("plugin:".length) : null;
-	const activePlugin = enabledPlugins.find(plugin => plugin.info.id === activePluginId);
-	const missingPlugin = activePluginId !== null && !activePlugin && !snapshot.loading;
-	useEffect(() => {
-		if (missingPlugin) setActive("keys");
-	}, [missingPlugin]);
-	const selected = missingPlugin ? "keys" : active;
-	const navSections: { id: SectionId; label: string; icon?: AppIcon }[] = [
-		...SECTIONS,
-		...enabledPlugins.map(plugin => ({ id: `plugin:${plugin.info.id}` as const, label: plugin.info.manifest?.name ?? plugin.info.id })),
-	];
+	const selected = active;
+	const navSections: { id: SectionId; label: string; icon?: AppIcon }[] = [...SECTIONS];
 
 	useEffect(() => {
 		const authority = writeOrder.current;
@@ -269,12 +251,12 @@ export function SettingsDialogBody({
 			aria-modal="true"
 			aria-label="Settings"
 			data-testid="settings-dialog"
-			className="settings-dialog-pop flex h-[660px] max-h-[88vh] w-[960px] max-w-[92vw] flex-col overflow-hidden rounded-3xl border-2 border-border bg-background shadow-2xl"
+			className="settings-workspace settings-dialog-pop"
 			onClick={(e) => e.stopPropagation()}
 		>
-			<header className="flex h-18 shrink-0 items-center gap-3 border-b-2 border-border bg-card px-5">
-				<Owl mood="neutral" size={44} />
-				<h2 className="text-2xl font-black tracking-tight">Settings</h2>
+			<header className="settings-header">
+				<span className="settings-brand"><Owl mood="neutral" size={28} /></span>
+				<h2 className="settings-title">Settings</h2>
 				<Hint
 						label="Close"
 						binding="escape"
@@ -284,7 +266,7 @@ export function SettingsDialogBody({
 					type="button"
 					aria-label="Close settings"
 					data-testid="settings-close"
-					className="ml-auto flex size-10 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					className="settings-close"
 					onClick={onClose}
 				>
 					<XIcon className="size-5" strokeWidth={2.75} />
@@ -292,26 +274,22 @@ export function SettingsDialogBody({
 					</Hint>
 			</header>
 
-			<div className="flex min-h-0 flex-1">
+			<div className="settings-layout">
 				{
 }
 				<nav
 					aria-label="Settings sections"
 					data-testid="settings-nav"
-					className="flex min-h-0 w-56 shrink-0 flex-col gap-1 overflow-y-auto border-r-2 border-border bg-card p-3"
+					className="settings-sidebar"
 				>
 					{navSections.map((s, index) => (
 						<div key={s.id} className="shrink-0">
-							{index === SECTIONS.length && <hr className="my-2 border-t-2 border-border" />}
+							{index === SECTIONS.length && <hr className="settings-nav-divider" />}
 							<button
 								type="button"
 								data-testid={`settings-nav-${s.id}`}
 								aria-current={selected === s.id}
-								className={`flex w-full cursor-pointer items-center gap-3 break-words rounded-xl border-2 px-3 py-2 text-left text-sm font-extrabold transition-colors ${
-									selected === s.id
-										? "border-secondary/70 bg-secondary-soft text-secondary"
-										: "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
-								}`}
+								className="settings-nav-item"
 								onClick={() => setActive(s.id)}
 							>
 								{s.icon && <s.icon aria-hidden="true" focusable="false" className="size-5 shrink-0" />}
@@ -325,10 +303,10 @@ export function SettingsDialogBody({
 }
 				<div
 					ref={contentRef}
-					className="min-w-0 flex-1 overflow-y-auto"
+					className="settings-content"
 					data-testid="settings-content"
 				>
-					{error && !activePluginId && (
+					{error && (
 						<p
 							role="alert"
 							className="m-4 rounded-xl border-2 border-error/40 bg-error-soft px-3 py-2 text-sm font-bold text-error"
@@ -337,9 +315,7 @@ export function SettingsDialogBody({
 							{error}
 						</p>
 					)}
-					{activePlugin ? <PluginSettingsPage key={`${activePlugin.info.id}/${activePlugin.info.revision}`} plugin={activePlugin} />
-							: activePluginId !== null ? <p role="status" className="px-6 py-5 text-xs text-muted-foreground">Loading plugins…</p>
-								: record === undefined ? (
+					{record === undefined ? (
 						<p className="px-6 py-5 text-xs text-muted-foreground/70">
 							Loading settings…
 						</p>

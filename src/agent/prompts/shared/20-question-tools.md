@@ -13,7 +13,7 @@ Applies to every graded question you ask, whatever its role:
 
 ### His reasoning
 
-Read any reasoning included in the learner's answer or chat messages. Separate thinking and reading-notes fields are not collected. Older records can contain these channels; do not expect them on new answers. Dictated text may contain transcription noise, which should not be mistaken for a conceptual error.
+Read any reasoning included in the learner's answer or chat messages. Separate thinking and reading-notes fields are not collected. Older records can contain these channels; do not expect them on new answers.
 
 ### `ask_user_question`
 
