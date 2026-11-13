@@ -436,7 +436,7 @@ function SessionsSidebar() {
 				</div>
 
 				{ }
-				<>
+				<div className="flex flex-col gap-2">
 					<button
 						type="button"
 						data-testid="new-session"
@@ -470,7 +470,7 @@ function SessionsSidebar() {
 						<WaypointsIcon className="size-5 shrink-0" />
 						<span className="min-w-0 text-left font-extrabold">Knowledge map</span>
 					</Link>
-				</>
+				</div>
 
 				<div className="mx-4 mb-2 mt-3 flex items-center justify-between">
 					<span className="text-sm font-extrabold text-muted-foreground">Sessions</span>
